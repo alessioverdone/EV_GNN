@@ -24,7 +24,7 @@ EV_GNN\
 │──── \ config.py --> Code parameters \
 │──── \ dataset --> Denmark dataset code \
 │──── \ main.py --> Start training \
-│──── \ model --> Collection of neural models  \
+│──── \ model --> Collection of Neural Models  \
 │──── \ utils --> Utils functions \
 │──── \ webscraping --> Gathering denmark dataset data \
 
