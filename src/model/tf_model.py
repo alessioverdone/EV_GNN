@@ -55,8 +55,8 @@ class TF_model(LightningModule):
                                 activation='relu')
         # GraphWavenet
         elif params.model == 'GraphWavenet':
-            self.graph_wavenet = GraphWaveNetModel(input_size=1,
-                                                    output_size=1,
+            self.graph_wavenet = GraphWaveNetModel(input_size=self.params.traffic_features+self.params.ev_features,
+                                                    output_size=self.params.traffic_features+self.params.ev_features,
                                                     horizon=params.prediction_window,
                                                     hidden_size=hidden_channels,
                                                     n_nodes=params.num_nodes,
@@ -139,7 +139,12 @@ class TF_model(LightningModule):
         elif self.params.model == 'GraphWavenet':
             # torch-spatiotemporal library data format
             if x.shape != 4:
-                x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size, self.params.lags, self.params.num_nodes, 1))
+                # x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size, self.params.lags, self.params.num_nodes, 1))
+                # edge_index = edge_index[:, :int(edge_index.shape[1]/self.params.batch_size)]
+                x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                    self.params.lags,
+                                                    self.params.num_nodes,
+                                                    self.params.traffic_features+self.params.ev_features))  # newyork era 7
                 edge_index = edge_index[:, :int(edge_index.shape[1]/self.params.batch_size)]
             x = self.graph_wavenet(x, edge_index)
             x = rearrange(x, 'b t n f ->  (b n) (t f) ')
@@ -195,7 +200,7 @@ class TF_model(LightningModule):
 
         # Get data from batches
         x, y, edge_index, edge_weight = (train_batch.x,
-                                         train_batch.y[:, :self.params.prediction_window],
+                                         train_batch.y,
                                          train_batch.edge_index,
                                          train_batch.edge_attr)
         if self.params.dataset_name in ['METR-LA', 'solar', 'electricity'] and len(x.shape) == 4:
@@ -218,7 +223,7 @@ class TF_model(LightningModule):
     def validation_step(self, val_batch, batch_idx):
         # Get data from batches
         x, y, edge_index, edge_weight = (val_batch.x,
-                                         val_batch.y[:, :self.params.prediction_window],
+                                         val_batch.y,  #  val_batch.y[:, :self.params.prediction_window],
                                          val_batch.edge_index,
                                          val_batch.edge_attr)
         if self.params.dataset_name in ['METR-LA', 'solar', 'electricity'] and len(x.shape) == 4:

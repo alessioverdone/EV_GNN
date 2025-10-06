@@ -7,9 +7,8 @@ from src.utils.utils import get_model, get_callbacks
 
 # Parser
 parser = argparse.ArgumentParser(description="Experiments parameters!")
-parser.add_argument("--dataset_name", type=str, default='denmark', help="['denmark', 'metr_la']")
-parser.add_argument("--traffic_temporal_data_folder", type=str, default=r'/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/traffic/denmark/citypulse_traffic_raw_data_surrey_feb_jun_2014/traffic_feb_june', help="Data path!")
-parser.add_argument("--batch_size", type=int, default=32, help="Batch size!")
+parser.add_argument("--dataset_name", type=str, default='chicago', help="['denmark', 'metr_la', 'newyork', 'chicago']")
+parser.add_argument("--batch_size", type=int, default=16, help="Batch size!")
 parser.add_argument("--model", type=str, default='GraphWavenet', help="Select model!")
 parser.add_argument("--verbose", "-v", action="store_false", help="Attiva output dettagliato")
 args = parser.parse_args()
