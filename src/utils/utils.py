@@ -1,8 +1,9 @@
-from typing import Optional, Tuple
-
+import torch
 import pandas as pd
-from lightning.pytorch.callbacks import ModelCheckpoint
-from pytorch_lightning.callbacks import EarlyStopping
+from typing import Optional, Tuple
+from torch_geometric.utils import scatter
+from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+
 from src.model.tf_model import TF_model
 
 
@@ -13,10 +14,6 @@ def get_model(run_params):
         raise Exception('Error in select the model!')
     return model
 
-
-import torch
-
-import torch
 
 
 def directed_to_undirected(edges: torch.Tensor, edge_weights: Optional[torch.Tensor] = None) -> Tuple[
@@ -53,8 +50,6 @@ def directed_to_undirected(edges: torch.Tensor, edge_weights: Optional[torch.Ten
 
     return undirected_edges, None
 
-import torch
-from torch_geometric.utils import scatter
 
 def edge_to_node_aggregation(edge_index, edge_attr, num_nodes):
     # edge_index: Indici degli archi (2, E)
@@ -76,10 +71,12 @@ def edge_to_node_aggregation(edge_index, edge_attr, num_nodes):
 
 def get_callbacks(run_params):
     # Callbacks
+    callbacks = list()
     checkpoint_callback = ModelCheckpoint(
         dirpath='../checkpoints',
         save_last=True,
-        save_top_k=1,
+        filename="{epoch}-{val_loss:.2f}",  # naming
+        save_top_k=2,
         verbose=True,
         monitor='val_mse',
         mode='min'
@@ -92,14 +89,12 @@ def get_callbacks(run_params):
         verbose=False,
         mode='min')
 
-    if run_params.save_ckpts and run_params.early_stop_callback_flag:
-        callbacks = [checkpoint_callback, early_stop_callback]
-    elif run_params.save_ckpts:
-        callbacks = [checkpoint_callback]
-    elif run_params.early_stop_callback_flag:
-        callbacks = [early_stop_callback]
-    else:
-        callbacks = []
+    if run_params.save_ckpts:
+        callbacks += [checkpoint_callback]
+
+    if run_params.early_stopping:
+        callbacks += [early_stop_callback]
+
     return callbacks
 
 

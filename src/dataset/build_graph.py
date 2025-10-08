@@ -2,7 +2,7 @@ import ast
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from src.dataset.utils import augment_graph_df
+from src.dataset.utils import augment_graph_df_v3
 
 traffic_metadata_csv = r"/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/newyork/traffic/stations_meta_data.csv"
 filter_traffic_csv = r"/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/newyork/traffic/filter_newyork_map.csv"
@@ -44,7 +44,7 @@ filter_traffic_metadata[points_col] = (
 
 # Augment graph connections
 if augment_graph:
-    filter_traffic_metadata = augment_graph_df(filter_traffic_metadata, fill_pct=augment_factor)
+    filter_traffic_metadata = augment_graph_df_v3(filter_traffic_metadata, fill_pct=augment_factor)
 
 # 3) Crea la figura unica
 plt.figure(figsize=(10, 10))

@@ -1,6 +1,6 @@
-from tsl.nn.models import DCRNNModel
-import pytorch_lightning as pl
 import torch
+import lightning as pl
+from tsl.nn.models import DCRNNModel
 
 class TSL_model(pl.LightningModule):
     def __init__(self, node_features, out_dim, hidden_channels, params):

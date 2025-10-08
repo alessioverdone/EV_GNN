@@ -19,9 +19,9 @@ from torch_geometric.data import Data
 
 from src.config import Parameters
 from src.dataset.resamplling import resample_to_common_time
-from src.dataset.utils import create_adjacency_matrix, haversine, build_edges_with_node_ids, \
-    create_adjacency_matrix_newyork, augment_graph_df_v3, append_along_N_torch, \
-    process_traffic_metadata, build_edges_with_node_ids_chicago, process_traffic_metadata_newyork
+from src.dataset.utils import (create_adjacency_matrix, haversine, build_edges_with_node_ids, \
+    create_adjacency_matrix_newyork, augment_graph_df_v3, append_along_N_torch, build_edges_with_node_ids_chicago,
+                               process_traffic_metadata_newyork)
 from src.utils.utils import directed_to_undirected, edge_to_node_aggregation
 
 
@@ -52,6 +52,10 @@ class EVDataModule(LightningDataModule):
 
         # Newyork dataset
         elif self.run_params.dataset_name == 'newyork':
+            # _TRAFFIC_DATA_COLUMNS = ["speed", "travel_time", "status", "data_as_of", "link_id"]
+            # _TRAFFIC_METADATA_COLUMNS = ["id", "link_points", "points", "distances"]
+            # _EV_DATA_COLUMNS = ["location_id", "timestamp", "Available", "Total", "Offline"]
+            # _EV_METADATA_COLUMNS = ["LocID", "LocName", "Latitude", "Longitude"]
             self.run_params.traffic_temporal_data_folder = os.path.join(self.run_params.project_path,
                                                                         'data',
                                                                         self.run_params.dataset_name,
@@ -68,6 +72,8 @@ class EVDataModule(LightningDataModule):
                                                             'data',
                                                             self.run_params.dataset_name,
                                                             'ev/location_meta_data.csv')
+            self.run_params.traffic_columns_to_use =  ["speed", "travel_time"]
+            self.run_params.ev_columns_to_use = ["Available"]
             dataset = DatasetNewyork(self.run_params)
 
         # Chicago dataset
@@ -97,6 +103,8 @@ class EVDataModule(LightningDataModule):
         self.run_params.num_nodes = self.num_station
         self.run_params.traffic_features = dataset.traffic_features
         self.run_params.ev_features = dataset.ev_features
+        self.run_params.traffic_features_names = dataset.traffic_columns_used_in_data
+        self.run_params.ev_features_names = dataset.ev_columns_used_in_data
 
         # Split data
         len_dataset = len(dataset)
@@ -595,7 +603,8 @@ class DatasetNewyork(Dataset):
                 df["data_as_of"] = pd.to_datetime(df["data_as_of"], format="ISO8601", errors="coerce").dt.floor("min")
 
                 # Cast: Keep only the features (without the time column) and convert to numeric
-                feature_cols = [c for c in DatasetNewyork._TRAFFIC_DATA_COLUMNS if c != "data_as_of"]
+                feature_cols_ = [c for c in DatasetNewyork._TRAFFIC_DATA_COLUMNS if c != "data_as_of"]
+                feature_cols = [c for c in feature_cols_ if c in self.params.traffic_columns_to_use]
                 df = df[["data_as_of"] + feature_cols]  # maintain desired order, keeping time as a column (not index)
                 df[feature_cols] = df[feature_cols].apply(pd.to_numeric, errors="coerce")
 
@@ -654,7 +663,8 @@ class DatasetNewyork(Dataset):
             df = df.set_index("timestamp")
 
             # Cast
-            feature_cols = [c for c in ev_columns if c != "timestamp"]
+            feature_cols_ = [c for c in ev_columns if c != "timestamp"]
+            feature_cols = [c for c in feature_cols_ if c in self.params.ev_columns_to_use]
             df = df[feature_cols]  # mantiene ordine voluto
             df = df.apply(pd.to_numeric, errors="coerce")
 
@@ -791,7 +801,8 @@ class DatasetNewyork(Dataset):
 
 
                 # Cast: Keep only the features (without the time column) and convert to numeric
-                feature_cols = [c for c in DatasetNewyork._TRAFFIC_DATA_COLUMNS if c != "data_as_of"]
+                feature_cols_ = [c for c in DatasetNewyork._TRAFFIC_DATA_COLUMNS if c != "data_as_of"]
+                feature_cols = [c for c in feature_cols_ if c in self.params.traffic_columns_to_use]
                 df = df[["data_as_of"] + feature_cols]  # maintain desired order, keeping time as a column (not index)
                 df[feature_cols] = df[feature_cols].apply(pd.to_numeric, errors="coerce")
 
@@ -824,7 +835,7 @@ class DatasetNewyork(Dataset):
             df_all = pd.concat(dfs_features_only, axis=1, keys=sites, names=["site", "feature"])
             self.df_all = df_all  # already aligned per line; no union/padding
             self.timestamp_final_traffic = pd.RangeIndex(start=0, stop=min_len, name="row")  # indice posizionale
-
+            self.traffic_columns_used_in_data = dfs_features_only[0].columns
             # 4) Build the tensor: (N nodes, T timesteps (=min_len), M features)
             data = np.stack([d.values.astype(np.float32) for d in dfs_features_only], axis=0)
             self.data_tensor_traffic = torch.tensor(data, dtype=torch.float32, device=self.device)
@@ -963,7 +974,8 @@ class DatasetNewyork(Dataset):
                     raise ValueError(strategy)
 
             # Cast
-            feature_cols = [c for c in ev_columns if c != "timestamp"]
+            feature_cols_ = [c for c in ev_columns if c != "timestamp"]
+            feature_cols = [c for c in feature_cols_ if c in self.params.ev_columns_to_use]
             df = df[feature_cols]  # mantiene ordine voluto
             df = df.apply(pd.to_numeric, errors="coerce")
 
@@ -991,6 +1003,7 @@ class DatasetNewyork(Dataset):
         self.df_ev_all = df_all.sort_index()  # (T_max, N*M)
 
         # Build EV tensor
+        self.ev_columns_used_in_data = dfs_aligned[0].columns
         data = np.stack([d.values.astype(np.float32) for d in dfs_aligned], axis=0)
         self.data_tensor_ev = torch.tensor(data, dtype=torch.float32, device=self.device)
         self.N_ev, self.T_ev, self.M_ev = self.data_tensor_ev.shape
@@ -1045,7 +1058,7 @@ class DatasetNewyork(Dataset):
         new_temp_list = list()
         for elem in temp_list:
             if len(elem) == 0:
-                new_temp_list.append(torch.zeros(ev_timesteps,3).to(self.params.device))
+                new_temp_list.append(torch.zeros(ev_timesteps,len(self.params.ev_columns_to_use)).to(self.params.device))
             elif len(elem) == 1:
                 new_temp_list.append(elem[0])
             else:
@@ -1077,23 +1090,6 @@ class DatasetNewyork(Dataset):
         # edge_to_node_aggregation
         self.final_temporal_merged_data = edge_to_node_aggregation(self.edge_index_traffic, self.final_temporal_merged_data, len(self.nodes_df))
         print('Done!')
-
-
-
-        # ------------------------------------------ Temporary setup --------------------------------------------------
-        # # To delete! Modification to geenrate same number of ev and traffic timesteps
-        # # Repeat EV_timesteps dimension to match Traffic timesteps dimn
-        # repetition = int(self.data_tensor_traffic.shape[1] / ev_temporal_data_on_merged_nodes.shape[1]) + 1
-        # ev_temporal_data_on_merged_nodes = ev_temporal_data_on_merged_nodes.repeat(1, repetition, 1)
-        # ev_temporal_data_on_merged_nodes = ev_temporal_data_on_merged_nodes[:, :self.data_tensor_traffic.shape[1], :]
-        # self.data_tensor_merged = torch.cat([self.data_tensor_traffic,ev_temporal_data_on_merged_nodes], dim=-1)
-        #
-        # # 4 and 5 column order swapped in order to have last feature as label
-        # order = [0, 1, 2, 3, 5, 4]
-        # self.data_tensor_merged = self.data_tensor_merged[:, :, order]
-        # ------------------------------------------------- End --------------------------------------------------------
-
-        # TODO: fai grafico e diverse modalità di creazione grafo per visualizzare risultati
 
 
     def preprocess_and_assemble_data(self):
@@ -1906,7 +1902,6 @@ def get_datamodule(params):
                                               window=params.lags,
                                               stride=1)
         # Normalize data using mean and std computed over time and node dimensions
-
         splitter = TemporalSplitter(val_len=0.2,
                                     test_len=0.1)
         data_module_instance = SpatioTemporalDataModule(

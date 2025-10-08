@@ -10,8 +10,7 @@ import re
 from typing import List, Tuple
 from folium.features import DivIcon
 import csv
-
-# from src.dataset.utils import haversine
+import os
 
 
 def mappa_osservazioni_csv_denmark(
@@ -561,39 +560,40 @@ def mappa_osservazioni_csv_chicago(
 
 if __name__ == '__main__':
     # Choose one in ['denmark', 'newyork', 'chicago']
-    dataset = 'chicago'
+    datapath = '/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN_repo/EV_GNN/data'
+    dataset = 'newyork'
     if dataset == 'denmark':
         mappa_osservazioni_csv_denmark(
-            r'/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/denmark/traffic/observation_traffic_metadata.csv',
-            file_html=r'/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/denmark/other/observation.html',
+            os.path.join(datapath,"denmark/traffic/observation_traffic_metadata.csv"),
+            file_html=os.path.join(datapath,"denmark/other/observation.html"),
             zoom_start=9,
             usa_satellite=True,
             disegna_linea=True,
-            ev_file=r'/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/denmark/ev/other/DenamarkEVstations.json')
+            ev_file=os.path.join(datapath,"denmark/ev/other/DenamarkEVstations.json"))
     elif dataset == 'newyork':
         mappa_osservazioni_csv_newyork(
-            percorso_csv=r"/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/newyork/traffic/stations_meta_data.csv",
-            file_html=r"/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/newyork/other/map_v3.html",
+            percorso_csv=os.path.join(datapath,"newyork/traffic/stations_meta_data.csv"),
+            file_html=os.path.join(datapath,"newyork/other/map_v3.html"),
             zoom_start=12,
             usa_satellite=True,
             mostra_nodi=True,
             mostra_label=True,
             mostra_popup_id=True,
             show_ev=True,
-            ev_file=r"/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/newyork/ev/location_meta_data.csv",
+            ev_file=os.path.join(datapath,"newyork/ev/location_meta_data.csv"),
             seed_colori=123
         )
     elif dataset == 'chicago':
         mappa_osservazioni_csv_chicago(
-            traffic_file=r"/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/chicago/traffic/location_summary.csv",
-            file_html=r"/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/chicago/other/map_chicago.html",
+            traffic_file=os.path.join(datapath,"chicago/traffic/location_summary.csv"),
+            file_html=os.path.join(datapath,"chicago/other/map_chicago.html"),
             zoom_start=12,
             usa_satellite=True,
             mostra_nodi=True,
             mostra_label=True,
             mostra_popup_id=True,
             show_ev=True,
-            ev_file=r"/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN/data/chicago/ev/ev_locations_metadata.csv",
+            ev_file=os.path.join(datapath,"chicago/ev/ev_locations_metadata.csv"),
             seed_colori=123
         )
     else:

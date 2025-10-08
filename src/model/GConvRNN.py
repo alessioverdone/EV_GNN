@@ -1,5 +1,5 @@
 import torch
-import pytorch_lightning as pl
+import lightning as pl
 import torch
 from torch.nn import Parameter
 from torch_geometric.nn import ChebConv

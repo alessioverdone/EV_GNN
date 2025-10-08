@@ -183,7 +183,7 @@ class TF_model(LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.params.lr)
         # Define the scheduler, you can set the patience and other options
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.15, verbose=True)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.15)  # , verbose=True
 
         return {
             'optimizer': optimizer,
@@ -245,7 +245,7 @@ class TF_model(LightningModule):
     def test_step(self, test_batch, batch_idx):
         # Get data from batches
         x, y, edge_index, edge_weight = (test_batch.x,
-                                         test_batch.y[:, :self.params.prediction_window],
+                                         test_batch.y,
                                          test_batch.edge_index,
                                          test_batch.edge_attr)
         if self.params.dataset_name in ['METR-LA', 'solar', 'electricity'] and len(x.shape) == 4:

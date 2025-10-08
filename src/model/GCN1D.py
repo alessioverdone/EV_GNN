@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
+import lightning as pl
 from torch_geometric.nn.inits import zeros
 from torch import Tensor
 from torch.nn import Parameter, init

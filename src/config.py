@@ -4,12 +4,12 @@ from time import strftime
 
 class Parameters:
     # Datasets and paths
-    save_preprocessed_data = True
-    load_preprocessed_data = True
+    save_preprocessed_data = False  # related to traffic_temporal_data_processed
+    load_preprocessed_data = False  # related to traffic_temporal_data_processed
     use_traffic_metadata_processed = True
-    use_traffic_temporal_data_processed = True
+    use_traffic_temporal_data_processed = False
     dataset_name = 'newyork'  # ['METR-LA', 'Electricity']
-    project_path = r'/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN'
+    project_path = r'/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN_repo/EV_GNN'
     preprocessed_dataset_path = os.path.join(project_path, 'data', 'dev', dataset_name)
     traffic_temporal_data_folder = os.path.join(project_path, 'data', dataset_name, 'traffic/traffic_data')
     traffic_metadata_file = os.path.join(project_path, 'data', dataset_name, 'traffic/processed_newyork_traffic_graph.csv')
@@ -36,7 +36,7 @@ class Parameters:
     # LT Trainer parameters
     accelerator = 'gpu'
     log_every_n_steps = 300
-    max_epochs = 300
+    max_epochs = 150
     enable_progress_bar = True
     check_val_every_n_epoch = 4
     node_features = 24
@@ -56,10 +56,11 @@ class Parameters:
 
     # Execution flags
     logging = False
-    save_ckpts = False
+    save_ckpts = True
     save_logs = True
     reproducible = True
     verbose = False
+    early_stopping = False
 
     def __init__(self, params=None):
         # Show parser args
