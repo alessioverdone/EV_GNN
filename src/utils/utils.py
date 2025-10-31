@@ -62,6 +62,7 @@ def edge_to_node_aggregation(edge_index, edge_attr, num_nodes):
 
     # Aggrega le caratteristiche degli archi sui nodi di origine
     node_features = scatter(edge_attr.cpu(), edge_index[0].cpu(), dim=0, dim_size=num_nodes, reduce='sum')
+
     # Aggrega le caratteristiche degli archi sui nodi di destinazione
     node_features += scatter(edge_attr.cpu(), edge_index[1].cpu(), dim=0, dim_size=num_nodes, reduce='sum')
 
