@@ -9,7 +9,7 @@ class Parameters:
     use_traffic_metadata_processed = True
     use_traffic_temporal_data_processed = False
     dataset_name = 'newyork'  # ['METR-LA', 'Electricity']
-    project_path = r'/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN_repo/EV_GNN'
+    project_path = r'/home/alessio/Scrivania/Alessio/EV/EV_GNN_repo/EV_GNN'
     preprocessed_dataset_path = os.path.join(project_path, 'data', 'dev', dataset_name)
     traffic_temporal_data_folder = os.path.join(project_path, 'data', dataset_name, 'traffic/traffic_data')
     traffic_metadata_file = os.path.join(project_path, 'data', dataset_name, 'traffic/processed_newyork_traffic_graph.csv')
@@ -17,6 +17,7 @@ class Parameters:
     ev_metadata_file = os.path.join(project_path, 'data', dataset_name, 'ev/location_meta_data.csv')
     chkpt_dir = ''
     default_save_tensor_name = '_processed_tensors'
+    csv_out_dir = os.path.join(project_path, 'src', 'csv_out')
 
     # Training parameters
     device = 'cuda'
@@ -95,6 +96,9 @@ class Parameters:
                                              'traffic/processed_newyork_traffic_graph.csv')
         self.ev_temporal_data_folder = os.path.join(self.project_path, 'data', self.dataset_name, 'ev/stations_connectors_counts_data')
         self.ev_metadata_file = os.path.join(self.project_path, 'data', self.dataset_name, 'ev/location_meta_data.csv')
+
+        self.dirpath_save_ckpt = os.path.join(self.project_path, 'checkpoints', f'ckpt_{self.dataset_name}')
+        os.makedirs(self.dirpath_save_ckpt, exist_ok=True)
 
 
 

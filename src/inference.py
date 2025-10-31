@@ -36,7 +36,7 @@ def flat_to_BNTF(flat_tensor, N, T):
     return flat_tensor.view(B, N, T, F).contiguous()
 
 
-def plot_sample_multifeature(history_BN_lf, target_BNTF, pred_BNTF, b_idx, n_idx, sample_id=None, out_file=None):
+def plot_sample_multifeature(history_BN_lf, target_BNTF, pred_BNTF, b_idx, n_idx, run_params, sample_id=None, out_file=None):
     """
     Disegna, in una nuova finestra, un subplot per ciascuna feature:
       - passato (linea continua) sui timestep [0 .. lags-1]
@@ -57,31 +57,46 @@ def plot_sample_multifeature(history_BN_lf, target_BNTF, pred_BNTF, b_idx, n_idx
     x_past = np.arange(0, lags)
     x_future = np.arange(lags, lags + T)
 
+    columns_name = run_params.traffic_columns_to_use + run_params.ev_columns_to_use  # TODO: add dict real name/visualiz. name
+
     for f in range(F):
+        # denormalizzazione: target e predetto
+        min_val = run_params.min_vals_normalization[f]
+        max_val = run_params.max_vals_normalization[f]
+
         ax = axes[f]
         # passato
-        if history_BN_lf is not None:
-            past = history_BN_lf[b_idx, n_idx, :, f]  # (lags,)
-            ax.plot(x_past, past, linewidth=1.5, label="past")
-        else:
-            ax.text(0.5, 0.5, 'No history available', ha='center', va='center', transform=ax.transAxes)
+        # if history_BN_lf is not None:
+        #     past = history_BN_lf[b_idx, n_idx, :, f]  # (lags,)
+        #     past_real = past * (max_val - min_val) + min_val
+        #     ax.plot(x_past, past_real, linewidth=1.5, label="past")
+        # else:
+        #     ax.text(0.5, 0.5, 'No history available', ha='center', va='center', transform=ax.transAxes)
+        past = history_BN_lf[b_idx, n_idx, :, f]  # (lags,)
+        past_real = past * (max_val - min_val) + min_val
+        ax.plot(x_past, past_real, linewidth=1.5, label="past")
 
         # futuro: target (tratteggiato) e pred (continuo)
         targ = target_BNTF[b_idx, n_idx, :, f]
         pred = pred_BNTF[b_idx, n_idx, :, f]
-        ax.plot(x_future, targ, linestyle='--', linewidth=1.5, label="target")
-        ax.plot(x_future, pred, linestyle='-', linewidth=1.5, label="pred")
+
+        # Denormalizza
+        targ_real = targ * (max_val - min_val) + min_val
+        pred_real = pred * (max_val - min_val) + min_val
+
+        ax.plot(x_future, targ_real, linestyle='--', linewidth=1.5, label="target")
+        ax.plot(x_future, pred_real, linestyle='-', linewidth=1.5, label="pred")
 
         # linea verticale al confine tra passato e futuro
         ax.axvline(x=lags - 0.5, color='black', linewidth=1.0)
 
         # titolino con id feature
-        ax.set_title(f"feature {f}", loc='left')
+        ax.set_title(f" {columns_name[f]}", loc='left')
         ax.set_ylabel("value")
 
         # opzionale: limiti x più comodi
         ax.set_xlim(-0.5, lags + T - 0.5)
-        ax.set_ylim(0, 1)
+        ax.set_ylim(min([past_real.min(), targ_real.min(), pred_real.min()]), max([past_real.max(), targ_real.max(), pred_real.max()]))
 
 
         # metti la leggenda solo nel primo subplot per non affollare
@@ -121,6 +136,8 @@ def main():
 
     # Parameters and datamodule
     run_params = Parameters(args)
+    run_params.time_series_step = 24
+
     dataModuleInstance, run_params = get_datamodule(run_params)
 
     # create dataloaders
@@ -204,7 +221,7 @@ def main():
             b_idx = random.randint(0, B - 1)
             n_idx = random.randint(0, N - 1)
             print(f"[{s+1}/{args.num_samples_to_show}] Plotting sample — sample {b_idx}, node {n_idx}")
-            plot_sample_multifeature(history_all, targets_all, preds_all, b_idx, n_idx, sample_id=s+1, out_file=None)
+            plot_sample_multifeature(history_all, targets_all, preds_all, b_idx, n_idx, run_params, sample_id=s+1, out_file=None)
 
 if __name__ == "__main__":
     main()
