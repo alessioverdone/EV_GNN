@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="sdkName" value="EV_env_2" />
+    <option name="sdkName" value="uv (EV_GNN)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12.9 WSL (Ubuntu-24.04): (/home/jerva/scrivania/AV/EV/.ev_venv/bin/python)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="uv (EV_GNN)" project-jdk-type="Python SDK" />
 </project>
