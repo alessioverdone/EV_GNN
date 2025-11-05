@@ -1,6 +1,5 @@
 import os
-from time import strftime
-
+import json
 
 class Parameters:
     # Datasets and paths
@@ -19,7 +18,6 @@ class Parameters:
     ev_metadata_file = os.path.join(project_path, 'data', dataset_name, 'ev/location_meta_data.csv')
     chkpt_dir = ''
     default_save_tensor_name = '_processed_tensors'
-    csv_out_dir = os.path.join(project_path, 'src', 'csv_out')
 
     # Training parameters
     device = 'cuda'
@@ -35,6 +33,7 @@ class Parameters:
     lr = 3e-4
     test_eval = 10
     seed = 42
+    id_run = '001'
 
     # LT Trainer parameters
     accelerator = 'gpu'
@@ -65,6 +64,13 @@ class Parameters:
     verbose = False
     early_stopping = False
 
+    # Inference parameters
+    checkpoint = r''
+    output_path = r''
+    show = True
+    num_samples_to_show = 1
+    export_csv = True
+
     def __init__(self, params=None):
         # Show parser args
         if params.verbose:
@@ -92,6 +98,7 @@ class Parameters:
         if self.num_of_traffic_nodes_limit != -1:
             self.num_nodes = self.num_of_traffic_nodes_limit
 
+        self.preprocessed_data_path = os.path.join(self.project_path, 'dataset', self.dataset_name)
         self.preprocessed_dataset_path = os.path.join(self.project_path, 'data', 'dev', self.dataset_name)
         self.traffic_temporal_data_folder = os.path.join(self.project_path, 'data', self.dataset_name, 'traffic/traffic_data')
         self.traffic_metadata_file = os.path.join(self.project_path, 'data', self.dataset_name,
@@ -99,8 +106,23 @@ class Parameters:
         self.ev_temporal_data_folder = os.path.join(self.project_path, 'data', self.dataset_name, 'ev/stations_connectors_counts_data')
         self.ev_metadata_file = os.path.join(self.project_path, 'data', self.dataset_name, 'ev/location_meta_data.csv')
 
-        self.dirpath_save_ckpt = os.path.join(self.project_path, 'checkpoints', f'ckpt_{self.dataset_name}')
+        self.dirpath_save_ckpt = os.path.join(self.project_path, 'registry', 'checkpoints', f'ckpt_{self.dataset_name}')
+        self.dirpath_save_config = os.path.join(self.project_path, 'registry', 'configurations', f'config_{self.id_run}.json')
         os.makedirs(self.dirpath_save_ckpt, exist_ok=True)
+        os.makedirs(self.preprocessed_data_path, exist_ok=True)
+
+
+    def to_json(self):
+        """Salva tutte le variabili dell'istanza in un file JSON."""
+        # Prendi tutti gli attributi pubblici (evitando metodi e variabili interne)
+        data = {
+            k: v for k, v in self.__dict__.items()
+            if not k.startswith('__') and not callable(v)
+        }
+        # Salva in JSON
+        with open(self.dirpath_save_config, 'w') as f:
+            json.dump(data, f, indent=4)
+        print(f"✅ Parametri salvati in {self.dirpath_save_config}")
 
 
 
