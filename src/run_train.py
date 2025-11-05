@@ -9,9 +9,10 @@ from src.utils.utils import get_model, get_callbacks
 
 # Parser
 parser = argparse.ArgumentParser(description="Experiments parameters!")
-parser.add_argument("--dataset_name", type=str, default='chicago', help="['denmark', 'metr_la', 'newyork', 'chicago']")
+parser.add_argument("--dataset_name", type=str, default='newyork', help="['denmark', 'metr_la', 'newyork', 'chicago']")
 parser.add_argument("--batch_size", type=int, default=16, help="Batch size!")
 parser.add_argument("--model", type=str, default='GraphWavenet', help="Select model!")
+parser.add_argument("--id_run", type=str, default='001', help="Select id run!")
 parser.add_argument("--verbose", "-v", action="store_false", help="Attiva output dettagliato")
 args = parser.parse_args()
 
@@ -20,6 +21,7 @@ run_params = Parameters(args)
 
 # Get dataset
 dataModuleInstance, run_params = get_datamodule(run_params)
+run_params.to_json()
 
 # Import model
 model = get_model(run_params)
@@ -29,12 +31,11 @@ callbacks = list()
 checkpoint_callback = ModelCheckpoint(
     dirpath=run_params.dirpath_save_ckpt,
     save_last=True,
-    filename="{epoch}-{val_mse:.6f}",  # naming
+    filename="id="+run_params.id_run+"_{epoch}-{val_mse:.6f}",  # naming
     save_top_k=2,
     verbose=True,
     monitor='val_mse',
-    mode='min'
-)
+    mode='min')
 
 early_stop_callback = EarlyStopping(
     monitor='val_mse',
