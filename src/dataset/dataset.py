@@ -535,11 +535,21 @@ class DatasetNewyork(Dataset):
         preprocessed_dataset_config = os.path.join(self.params.preprocessed_data_path,
                                                    'dataset_config.pt')
 
+        preprocessed_nodes_df = os.path.join(self.params.preprocessed_data_path,
+                                                   'nodes_df.csv')
+        preprocessed_edges_df = os.path.join(self.params.preprocessed_data_path,
+                                                   'edges_df.csv')
+        preprocessed_added_edges_df = os.path.join(self.params.preprocessed_data_path,
+                                                   'added_edges_df.csv')
+
         if (os.path.exists(preprocessed_filepath_merged_data) and
                 os.path.exists(preprocessed_filepath_time_column) and
                 os.path.exists(preprocessed_edge_index_traffic) and
                 os.path.exists(preprocessed_edge_weights_traffic) and
-                os.path.exists(preprocessed_dataset_config)):
+                os.path.exists(preprocessed_dataset_config) and
+                os.path.exists(preprocessed_nodes_df) and
+                os.path.exists(preprocessed_edges_df) and
+                os.path.exists(preprocessed_added_edges_df)):
             self.final_temporal_merged_data = torch.load(preprocessed_filepath_merged_data, weights_only=False)
             self.time_column = torch.load(preprocessed_filepath_time_column, weights_only=False)
             self.edge_index_traffic = torch.load(preprocessed_edge_index_traffic, weights_only=False)
@@ -556,6 +566,10 @@ class DatasetNewyork(Dataset):
             self.traffic_resolution = self.dataset_config["traffic_resolution"]
             self.ev_resolution = self.dataset_config["ev_resolution"]
 
+            self.nodes_df = pd.read_csv(preprocessed_nodes_df)
+            self.edges_df = pd.read_csv(preprocessed_edges_df)
+            self.added__df = pd.read_csv(preprocessed_added_edges_df)
+
             self.preprocess_and_assemble_data()
         else:
 
@@ -569,18 +583,6 @@ class DatasetNewyork(Dataset):
                 process_traffic_metadata_newyork(self.params,
                                                  self.params.traffic_metadata_file)
 
-            # # Load temporal data
-            # if self.params.load_preprocessed_data and len(os.listdir(self.params.preprocessed_dataset_path)) > 0:
-            #     # Load temporal data after temporal alignment and resolution resampling
-            #     self.data_tensor_traffic, self.data_tensor_ev = self.load_preprocessed_data()
-            #
-            #     # Visualize info
-            #     self.N_t, self.T_t, self.M_t = self.data_tensor_traffic.shape
-            #     N_e, T_e, M_e = self.data_tensor_ev.shape
-            #     print(f'Loaded Traffic data by rows: {self.N_t} nodes, {self.T_t} timesteps, {self.M_t} features')
-            #     print(f'Loaded EV data by rows: {N_e} nodes, {T_e} timesteps, {M_e} features')
-            #
-            # else:
             # Find temporal intersection window
             self.check_traffic_ev_time()
 
@@ -596,19 +598,6 @@ class DatasetNewyork(Dataset):
                                                                                     target="A",
                                                                                     # resample to traffic resolution
                                                                                     method="linear")
-
-            # Save processed results
-            # if self.params.save_preprocessed_data:
-            #     # Save temporal data after temporal alignment and resolution resampling
-            #     torch.save({"data_tensor_traffic": self.data_tensor_traffic, "data_tensor_ev": self.data_tensor_ev},
-            #                os.path.join(self.params.preprocessed_dataset_path,
-            #                             f"{self.params.dataset_name}{self.params.default_save_tensor_name}.pt"))
-            #
-            #     # Visualize info
-            #     self.N_t, self.T_t, self.M_t = self.data_tensor_traffic.shape
-            #     N_e, T_e, M_e = self.data_tensor_ev.shape
-            #     print(f'Saved Traffic data by rows: {self.N_t} nodes, {self.T_t} timesteps, {self.M_t} features')
-            #     print(f'Saved EV data by rows: {N_e} nodes, {T_e} timesteps, {M_e} features')
 
             # Construct graph, with original nodes, original edges plus fake edges to allow whole graph communication
             self.get_edges_traffic(threshold=self.params.graph_distance_threshold)
@@ -632,6 +621,10 @@ class DatasetNewyork(Dataset):
                               "traffic_resolution": self.traffic_resolution,
                               "ev_resolution": self.ev_resolution}
             torch.save(dataset_config, preprocessed_dataset_config)
+
+            self.nodes_df.to_csv(preprocessed_nodes_df)
+            self.edges_df.to_csv(preprocessed_edges_df)
+            self.added_edges_df.to_csv(preprocessed_added_edges_df)
 
             # Normalize and stack data into fixed-size input/output windows objects
             self.preprocess_and_assemble_data()
@@ -993,7 +986,7 @@ class DatasetNewyork(Dataset):
         data['__distances'] = data['__distances'].apply(sum)
         data_sorted = data.sort_values(by="id")
 
-        # Replace the 'id' column with increasing values ​​from 0 to len(df)-1
+        # Replace the 'id' column with increasing values from 0 to len(df)-1
         self.edge_id_mapping = dict(zip(data_sorted['id'], range(len(data_sorted))))  # old: new
         data_sorted['id'] = range(len(data_sorted))
 
@@ -1236,34 +1229,6 @@ class DatasetNewyork(Dataset):
                                                  self.data_tensor_traffic.shape[1],
                                                  self.ev_temporal_data_on_merged_nodes.shape[2], device='cpu')
 
-        ########## modo originale #############
-        # self.ev_temporal_data_on_merged_nodes.cpu()
-        # copy_edges_df = self.edges_df.copy()
-        # for i in range(self.ev_temporal_data_on_merged_nodes.shape[0]):
-        #     print(i)
-        #     ev_node_level_info = self.ev_temporal_data_on_merged_nodes[i, :, :]
-        #     ev_node_level_info.cpu()
-        #     # Filtra le righe che hanno src_id o tgt_id uguale a i
-        #     filtered_edges_ids = copy_edges_df[(copy_edges_df['src_id'] == i) | (copy_edges_df['tgt_id'] == i)][
-        #         'id'].tolist()
-        #     # Usa gli indici di filtered_edges_ids per assegnare i valori direttamente
-        #     self.ev_edge_temporal_data[filtered_edges_ids, :, :] = ev_node_level_info.cpu() / 2
-        #
-        # # Project ev info on node_t to edge_t
-        # self.final_temporal_merged_data = torch.cat([self.data_tensor_traffic.cpu(),
-        #                                              self.ev_edge_temporal_data.cpu()],
-        #                                             dim=-1)
-        # self.traffic_features, self.ev_features = (self.data_tensor_traffic.shape[-1],
-        #                                            self.ev_edge_temporal_data.shape[-1])
-        #
-        # # edge_to_node_aggregation
-        # self.final_temporal_merged_data = edge_to_node_aggregation(self.edge_index_traffic,
-        #                                                            self.final_temporal_merged_data,
-        #                                                            len(self.nodes_df))
-        # print('Done!')
-        ############################################
-
-        ######### modo 2 ####################################
         # Assumiamo:
         # self.ev_temporal_data_on_merged_nodes: [N, T, F_ev]  (EV su nodi traffic)
         # self.data_tensor_traffic:               [E, T, F_tr]
@@ -1297,8 +1262,6 @@ class DatasetNewyork(Dataset):
         self.final_temporal_merged_data = edge_to_node_aggregation(self.edge_index_traffic,
                                                                    self.final_temporal_merged_data,
                                                                    len(self.nodes_df))
-        ############################################
-
         print('Traffic and EV temporal data merging completed!')
 
     def preprocess_and_assemble_data(self):
@@ -1402,12 +1365,21 @@ class DatasetChicago(Dataset):
                                                          'edge_weights_traffic.pt')
         preprocessed_dataset_config = os.path.join(self.params.preprocessed_data_path,
                                                    'dataset_config.pt')
+        preprocessed_nodes_df = os.path.join(self.params.preprocessed_data_path,
+                                                   'nodes_df.csv')
+        preprocessed_edges_df = os.path.join(self.params.preprocessed_data_path,
+                                                   'edges_df.csv')
+        preprocessed_added_edges_df = os.path.join(self.params.preprocessed_data_path,
+                                                   'added_edges_df.csv')
 
         if (os.path.exists(preprocessed_filepath_merged_data) and
                 os.path.exists(preprocessed_filepath_time_column) and
                 os.path.exists(preprocessed_edge_index_traffic) and
                 os.path.exists(preprocessed_edge_weights_traffic) and
-                os.path.exists(preprocessed_dataset_config)):
+                os.path.exists(preprocessed_dataset_config) and
+                os.path.exists(preprocessed_nodes_df) and
+                os.path.exists(preprocessed_edges_df) and
+                os.path.exists(preprocessed_added_edges_df)):
             self.final_temporal_merged_data = torch.load(preprocessed_filepath_merged_data, weights_only=False)
             self.time_column = torch.load(preprocessed_filepath_time_column, weights_only=False)
             self.edge_index_traffic = torch.load(preprocessed_edge_index_traffic, weights_only=False)
@@ -1423,6 +1395,10 @@ class DatasetChicago(Dataset):
             self.end_time = self.dataset_config["end_time"]
             self.traffic_resolution = self.dataset_config["traffic_resolution"]
             self.ev_resolution = self.dataset_config["ev_resolution"]
+
+            self.nodes_df = pd.read_csv(preprocessed_nodes_df)
+            self.edges_df = pd.read_csv(preprocessed_edges_df)
+            self.added__df = pd.read_csv(preprocessed_added_edges_df)
 
             self.preprocess_and_assemble_data()
         else:
@@ -1457,34 +1433,6 @@ class DatasetChicago(Dataset):
                                                                                     target="A",
                                                                                     method="linear")
 
-                # # Save processed results
-                # if self.params.save_preprocessed_data:
-                #     # Save preprocessed data after temporal alignment and resolution resampling
-                #     torch.save({"data_tensor_traffic": self.data_tensor_traffic, "data_tensor_ev": self.data_tensor_ev},
-                #                os.path.join(self.params.preprocessed_dataset_path,
-                #                             f"{self.params.dataset_name}{self.params.default_save_tensor_name}.pt"))
-                #
-                #     # Visualize info
-                #     self.N_t, self.T_t, self.M_t = self.data_tensor_traffic.shape
-                #     N_e, T_e, M_e = self.data_tensor_ev.shape
-                #     print(f'Saved Traffic data by rows: {self.N_t} nodes, {self.T_t} timesteps, {self.M_t} features')
-                #     print(f'Saved EV data by rows: {N_e} nodes, {T_e} timesteps, {M_e} features')
-
-            # # If you want to use preprocessed data and preprocessed data doesn't exist
-            # elif self.params.use_traffic_temporal_data_processed and processed_traffic_temporal_data_exist:
-            #
-            #     # Load temporal data after temporal alignment and resolution resampling
-            #     self.data_tensor_traffic, self.data_tensor_ev = self.load_preprocessed_data()
-            #
-            #     # Visualize info
-            #     self.N_t, self.T_t, self.M_t = self.data_tensor_traffic.shape
-            #     N_e, T_e, M_e = self.data_tensor_ev.shape
-            #     print(f'Loaded Traffic data by rows: {self.N_t} nodes, {self.T_t} timesteps, {self.M_t} features')
-            #     print(f'Loaded EV data by rows: {N_e} nodes, {T_e} timesteps, {M_e} features')
-
-            # else:
-            #     raise Exception('Error in loading or saving data!')
-
             # Construct graph, with original nodes, original edges and add fake edges (if needed) to allow whole
             # graph communication.
             self.get_edges_traffic(threshold=self.params.graph_distance_threshold)
@@ -1497,6 +1445,9 @@ class DatasetChicago(Dataset):
             torch.save(self.time_column, preprocessed_filepath_time_column)
             torch.save(self.edge_index_traffic, preprocessed_edge_index_traffic)
             torch.save(self.edge_weights_traffic, preprocessed_edge_weights_traffic)
+            self.nodes_df.to_csv(preprocessed_nodes_df)
+            self.edges_df.to_csv(preprocessed_edges_df)
+            self.added_edges_df.to_csv(preprocessed_added_edges_df)
 
             dataset_config = {"number_of_station": self.number_of_station,
                               "traffic_features": self.traffic_features,
@@ -2122,41 +2073,6 @@ class DatasetChicago(Dataset):
         self.ev_edge_temporal_data = torch.zeros(self.data_tensor_traffic.shape[0],
                                                  self.data_tensor_traffic.shape[1],
                                                  self.ev_temporal_data_on_merged_nodes.shape[2], device='cpu')
-
-        ########## modo originale #############
-        # self.ev_temporal_data_on_merged_nodes.cpu()
-        # copy_edges_df = self.edges_df.copy()
-        # for i in range(self.ev_temporal_data_on_merged_nodes.shape[0]):
-        #     print(i)
-        #     ev_node_level_info = self.ev_temporal_data_on_merged_nodes[i, :, :]
-        #     ev_node_level_info.cpu()
-        #
-        #     # Filter rows that have src_id or tgt_id equal to i
-        #     filtered_edges_ids = copy_edges_df[(copy_edges_df['src_id'] == i) | (copy_edges_df['tgt_id'] == i)][
-        #         'id'].tolist()
-        #
-        #     # Use the filtered_edges_ids indexes to assign values directly
-        #     self.ev_edge_temporal_data[filtered_edges_ids, :, :] = ev_node_level_info.cpu() / 2
-        #
-        # # Project ev info on node_t to edge_t
-        # self.final_temporal_merged_data = torch.cat([self.data_tensor_traffic.cpu(),
-        #                                              self.ev_edge_temporal_data.cpu()],
-        #                                             dim=-1)
-        # self.traffic_features, self.ev_features = (self.data_tensor_traffic.shape[-1],
-        #                                            self.ev_edge_temporal_data.shape[-1])
-        #
-        # # Final temporal data on nodes
-        # self.final_temporal_merged_data = edge_to_node_aggregation(self.edge_index_traffic,
-        #                                                            self.final_temporal_merged_data,
-        #                                                            len(self.nodes_df))
-        # print('Done!')
-        ############################################
-
-        ######### modo 2 ####################################
-        # Assumiamo:
-        # self.ev_temporal_data_on_merged_nodes: [N, T, F_ev]  (EV su nodi traffic)
-        # self.data_tensor_traffic:               [E, T, F_tr]
-        # self.edges_df ha colonne 'src_id','tgt_id' ed è allineato riga-per-edge con gli indici [0..E-1]
 
         device = self.data_tensor_traffic.device
         nodes_ev = self.ev_temporal_data_on_merged_nodes.to(device)  # [N,T,F_ev]

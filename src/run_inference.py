@@ -328,11 +328,11 @@ def export_predictions_csv(preds_BNTF, csv_dir, start_time_str, step_minutes, ru
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_name", type=str, default='newyork',
+    parser.add_argument("--dataset_name", type=str, default='chicago',
                         help="['denmark', 'metr_la', 'newyork', 'chicago']")
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--model", type=str, default='GraphWavenet')
-    parser.add_argument("--checkpoint", type=str, default='../registry/checkpoints/ckpt_newyork/last.ckpt',
+    parser.add_argument("--checkpoint", type=str, default='../registry/checkpoints/ckpt_chicago/last.ckpt',
                         help="Path to checkpoint file (.ckpt or .pt)")
     parser.add_argument("--output_path", type=str, default='../registry/inference_outputs', help="folder to save preds/targets")
     parser.add_argument("--show", action='store_true', help="Show sample plots (one window per sample)")

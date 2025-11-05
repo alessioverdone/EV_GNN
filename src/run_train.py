@@ -1,18 +1,17 @@
 import argparse
 import lightning as pl
-import pytorch_lightning as lp
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 
 from src.config import Parameters
 from src.dataset.dataset import get_datamodule
-from src.utils.utils import get_model, get_callbacks
+from src.utils.utils import get_model
 
 # Parser
 parser = argparse.ArgumentParser(description="Experiments parameters!")
-parser.add_argument("--dataset_name", type=str, default='newyork', help="['denmark', 'metr_la', 'newyork', 'chicago']")
+parser.add_argument("--dataset_name", type=str, default='chicago', help="['denmark', 'metr_la', 'newyork', 'chicago']")
 parser.add_argument("--batch_size", type=int, default=16, help="Batch size!")
 parser.add_argument("--model", type=str, default='GraphWavenet', help="Select model!")
-parser.add_argument("--id_run", type=str, default='001', help="Select id run!")
+parser.add_argument("--id_run", type=str, default='001_chicago', help="Select id run!")
 parser.add_argument("--verbose", "-v", action="store_false", help="Attiva output dettagliato")
 args = parser.parse_args()
 
