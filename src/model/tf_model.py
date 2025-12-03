@@ -8,9 +8,9 @@ import torch
 from tsl.nn.models import DCRNNModel, GraphWaveNetModel, AGCRNModel
 from lightning.pytorch import LightningModule
 
-from src.model.GCN1D import GCN1DConv_big, GCN1DConv
-from src.model.GConvRNN import GraphConvRNN_our
-from src.model.miniRNN import MultiLayerLSTMParallel, MultiLayerGRUParallel
+from src.model.gcn1d import GCN1DConv_big, GCN1DConv
+from src.model.gconvrnn import GraphConvRNN_our
+from src.model.mini_rnn import MultiLayerLSTMParallel, MultiLayerGRUParallel
 
 
 class TF_model(LightningModule):

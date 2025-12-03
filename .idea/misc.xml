@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="sdkName" value="uv (EV_GNN)" />
+    <option name="sdkName" value="Python 3.10.19 WSL (Ubuntu-24.04): (/home/phd/dgm/code/dgm_tlc/venv/bin/python)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="uv (EV_GNN)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11 virtualenv at C:\Users\Grid\Desktop\pc_nuovo\backup pc nuovo\PhD\EV\code\EV_GNN_repo\EV_GNN\venv" project-jdk-type="Python SDK" />
 </project>

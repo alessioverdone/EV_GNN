@@ -1,6 +1,9 @@
 import os
 import json
 
+import torch
+
+
 class Parameters:
     # Datasets and paths
     save_preprocessed_data = False  # related to traffic_temporal_data_processed
@@ -8,8 +11,7 @@ class Parameters:
     use_traffic_metadata_processed = True
     use_traffic_temporal_data_processed = False
     dataset_name = 'newyork'  # ['METR-LA', 'Electricity']
-    # project_path = r'/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN_repo/EV_GNN'
-    project_path = r'C:\Users\Grid\Desktop\PhD\EV\code\EV_GNN_repo\EV_GNN'
+    project_path = r'C:\Users\Grid\Desktop\pc_nuovo\backup pc nuovo\PhD\EV\code\EV_GNN_repo\EV_GNN'
 
     preprocessed_dataset_path = os.path.join(project_path, 'data', 'dev', dataset_name)
     traffic_temporal_data_folder = os.path.join(project_path, 'data', dataset_name, 'traffic/traffic_data')
@@ -46,7 +48,7 @@ class Parameters:
     # Data params
     num_nodes = 0
     num_of_traffic_nodes_limit = -1  # -1 for all nodes
-    num_of_ev_nodes_limit = 200
+    num_of_ev_nodes_limit = -1
     traffic_features = 0
     ev_features = 0
     graph_distance_threshold = 10
@@ -108,8 +110,16 @@ class Parameters:
 
         self.dirpath_save_ckpt = os.path.join(self.project_path, 'registry', 'checkpoints', f'ckpt_{self.dataset_name}')
         self.dirpath_save_config = os.path.join(self.project_path, 'registry', 'configurations', f'config_{self.id_run}.json')
+        self.output_path = os.path.join(self.output_path, self.dataset_name, self.id_run)
+        self.csv_out_path = os.path.join(self.output_path, 'csv_out')
         os.makedirs(self.dirpath_save_ckpt, exist_ok=True)
         os.makedirs(self.preprocessed_data_path, exist_ok=True)
+        os.makedirs(os.path.dirname(self.dirpath_save_config), exist_ok=True)
+        # os.makedirs(self.output_path, exist_ok=True)
+        # os.makedirs(self.csv_out_path, exist_ok=True)
+
+        self.device = str(torch.device('cuda' if torch.cuda.is_available() and self.accelerator == 'gpu' else 'cpu'))
+
 
 
     def to_json(self):
@@ -120,6 +130,7 @@ class Parameters:
             if not k.startswith('__') and not callable(v)
         }
         # Salva in JSON
+        os.makedirs(self.dirpath_save_ckpt, exist_ok=True)
         with open(self.dirpath_save_config, 'w') as f:
             json.dump(data, f, indent=4)
         print(f"✅ Parametri salvati in {self.dirpath_save_config}")
