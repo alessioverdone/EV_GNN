@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 from config import EVConfig
 from data_processor import ChicagoDataProcessor
-from route_planner import RoutePlanner
+from route_planner import EVRoutePlanner
 from optimizer import NSGAIIOptimizer
-from visualizer import Visualizer
+from visualizer import RouteVisualizer
 
 
 def find_route_endpoints(graph, min_distance=40.0, max_attempts=5000):
@@ -36,9 +36,9 @@ def main():
 
     print("Loading data...")
     processor = ChicagoDataProcessor('data/')
-    graph, stations, speed_data, availability_data = processor.load()
+    graph, stations, speed_data, availability_data, speed_ts, avail_ts = processor.load()
 
-    planner = RoutePlanner(graph, stations, speed_data, availability_data, ev_config)
+    planner = EVRoutePlanner(graph, stations, speed_data, availability_data, ev_config, speed_ts, avail_ts)
     optimizer = NSGAIIOptimizer(planner)
 
     print(f"\nNetwork: {graph.number_of_nodes()} nodes")
@@ -66,7 +66,7 @@ def main():
     print(f"Best by time: {objectives[best_time_idx].distance_km:.1f} km, "
           f"{objectives[best_time_idx].total_time_min:.1f} min")
 
-    visualizer = Visualizer()
+    visualizer = RouteVisualizer()
 
     pareto_fig = visualizer.plot_pareto_front(solutions, objectives)
     plt.savefig('outputs/pareto_front.png', dpi=300, bbox_inches='tight')

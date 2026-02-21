@@ -2,12 +2,31 @@
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import networkx as nx
+import numpy as np
 from typing import List, Dict
 
 from config import PathObjectives
 
 
-class Visualizer:
+class RouteVisualizer:
+
+    @staticmethod
+    def _get_avg_speed(route_planner, site_id: str) -> float:
+        if route_planner and hasattr(route_planner, 'traffic_data'):
+            if site_id in route_planner.traffic_data:
+                values = list(route_planner.traffic_data[site_id].values())
+                if values:
+                    return np.mean(values)
+        return 30.0
+
+    @staticmethod
+    def _get_avg_availability(route_planner, site_id: str) -> float:
+        if route_planner and hasattr(route_planner, 'availability_data'):
+            if site_id in route_planner.availability_data:
+                values = list(route_planner.availability_data[site_id].values())
+                if values:
+                    return np.mean(values)
+        return 5.0
 
     @staticmethod
     def plot_pareto_front(solutions: List[List[str]],
@@ -63,7 +82,7 @@ class Visualizer:
                 lons.append(node_data['lon'])
 
                 if node in route_charging_stops:
-                    hover_texts.append(f" CHARGING STOP<br>Node: {node}")
+                    hover_texts.append(f"⚡ CHARGING STOP<br>Node: {node}")
                 else:
                     hover_texts.append(f"Node: {node}")
 
@@ -116,12 +135,14 @@ class Visualizer:
                     stations = route_planner.get_stations_at_node(node)
                     if stations:
                         station = stations[0]
+                        avg_avail = RouteVisualizer._get_avg_availability(route_planner, station.station_id)
+                        avg_speed = RouteVisualizer._get_avg_speed(route_planner, station.station_id)
                         station_info = (f"USED CHARGING STATION<br>"
                                         f"{station.name}<br>"
                                         f"ID: {station.station_id}<br>"
                                         f"Power: {station.charging_power_kw} kW<br>"
-                                        f"Avg Availability: {station.get_average_availability():.1f} chargers<br>"
-                                        f"Avg Speed: {station.get_average_speed():.1f} mph")
+                                        f"Avg Availability: {avg_avail:.1f} chargers<br>"
+                                        f"Avg Speed: {avg_speed:.1f} mph")
 
                 used_station_names.append(station_info)
 
@@ -143,20 +164,22 @@ class Visualizer:
 
         stations_to_show = min(100, len(ev_stations))
         for station in list(ev_stations.values())[:stations_to_show]:
-            if station.nearest_road_node and station.nearest_road_node in graph:
-                if station.nearest_road_node in used_charging_nodes:
+            if station.src_node and station.src_node in graph:
+                if station.src_node in used_charging_nodes:
                     continue
 
-                node_data = graph.nodes[station.nearest_road_node]
+                node_data = graph.nodes[station.src_node]
                 other_station_lats.append(node_data['lat'])
                 other_station_lons.append(node_data['lon'])
+                avg_avail = RouteVisualizer._get_avg_availability(route_planner, station.station_id)
+                avg_speed = RouteVisualizer._get_avg_speed(route_planner, station.station_id)
                 other_station_names.append(
                     f"Available Charging Station<br>"
                     f"{station.name}<br>"
                     f"ID: {station.station_id}<br>"
                     f"Power: {station.charging_power_kw} kW<br>"
-                    f"Avg Availability: {station.get_average_availability():.1f} chargers<br>"
-                    f"Avg Speed: {station.get_average_speed():.1f} mph"
+                    f"Avg Availability: {avg_avail:.1f} chargers<br>"
+                    f"Avg Speed: {avg_speed:.1f} mph"
                 )
 
         if other_station_lats:
@@ -217,7 +240,9 @@ class Visualizer:
                              route_planner,
                              route_name: str = "Route"):
         summary = []
+        summary.append("=" * 80)
         summary.append(f"{route_name.upper()} SUMMARY")
+        summary.append("=" * 80)
 
         # Overall statistics
         summary.append(f"\nOVERALL:")
@@ -236,12 +261,13 @@ class Visualizer:
                 stations = route_planner.get_stations_at_node(node)
                 if stations:
                     station = stations[0]
+                    avg_avail = RouteVisualizer._get_avg_availability(route_planner, station.station_id)
                     summary.append(f"\n  Stop {i}:")
                     summary.append(f" Location: {node}")
                     summary.append(f" Station: {station.name}")
                     summary.append(f" Station ID: {station.station_id}")
                     summary.append(f" Charging Power: {station.charging_power_kw} kW")
-                    summary.append(f" Avg Availability: {station.get_average_availability():.1f} chargers")
+                    summary.append(f" Avg Availability: {avg_avail:.1f} chargers")
         else:
             summary.append(f"\nCHARGING STOPS: None (sufficient battery)")
 
@@ -251,3 +277,74 @@ class Visualizer:
         summary.append(f"  End: {path[-1]}")
 
         return "\n".join(summary)
+
+    @staticmethod
+    def plot_battery_profile(graph: nx.DiGraph,
+                             path: List[str],
+                             route_planner,
+                             title: str = "Battery Profile Along Route"):
+        if not path or len(path) < 2:
+            return None
+
+        ev_config = route_planner.ev_config
+
+        distances = [0]
+        soc_levels = [ev_config.current_soc * 100]
+        current_soc = ev_config.current_soc
+        total_distance = 0
+
+        charging_points = []
+        charging_distances = []
+
+        for i in range(len(path) - 1):
+            if not graph.has_edge(path[i], path[i+1]):
+                continue
+
+            edge_data = graph.edges[path[i], path[i+1]]
+            distance_km = edge_data.get('distance_km', 0)
+
+            total_distance += distance_km
+
+            energy_consumed = distance_km * ev_config.consumption_kwh_per_km
+            current_soc -= energy_consumed / ev_config.battery_capacity_kwh
+
+            distances.append(total_distance)
+            soc_levels.append(current_soc * 100)
+
+            next_node = path[i+1]
+            if route_planner.is_charging_location(next_node) and current_soc < ev_config.charge_trigger_soc:
+                stations = route_planner.get_stations_at_node(next_node)
+                if stations:
+                    energy_needed = max(0, (ev_config.target_charge_soc - current_soc) *
+                                        ev_config.battery_capacity_kwh)
+
+                    if energy_needed >= ev_config.min_charge_amount_kwh:
+                        charging_distances.append(total_distance)
+                        charging_points.append(current_soc * 100)
+
+                        current_soc = ev_config.target_charge_soc
+                        distances.append(total_distance)
+                        soc_levels.append(current_soc * 100)
+
+        fig = plt.figure(figsize=(14, 6))
+
+        plt.plot(distances, soc_levels, 'b-', linewidth=2, label='Battery SOC')
+        plt.axhline(y=ev_config.charge_trigger_soc * 100, color='orange',
+                    linestyle='--', label=f'Charging Trigger ({ev_config.charge_trigger_soc*100:.0f}%)')
+        plt.axhline(y=ev_config.min_soc_threshold * 100, color='red',
+                    linestyle='--', label=f'Minimum SOC ({ev_config.min_soc_threshold*100:.0f}%)')
+
+        if charging_distances:
+            plt.scatter(charging_distances, charging_points, color='yellow',
+                        s=200, marker='*', edgecolors='black', linewidths=2,
+                        label=f'Charging Stops ({len(charging_distances)})', zorder=5)
+
+        plt.xlabel('Distance (km)', fontsize=12)
+        plt.ylabel('State of Charge (%)', fontsize=12)
+        plt.title(title, fontsize=14)
+        plt.grid(True, alpha=0.3)
+        plt.legend(fontsize=10)
+        plt.ylim(0, 100)
+
+        plt.tight_layout()
+        return fig

@@ -1,5 +1,5 @@
 import numpy as np
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict
 
 
@@ -21,31 +21,9 @@ class ChargingStation:
     name: str
     latitude: float
     longitude: float
-    nearest_road_node: int = None
-    distance_to_road_km: float = 0.0
     src_node: int = None
     tgt_node: int = None
-    edge_id: int = None
-    edge_distance_km: float = 0.0
     charging_power_kw: float = 50.0
-    hourly_speeds: Dict[int, float] = field(default_factory=dict)
-    hourly_availability: Dict[int, float] = field(default_factory=dict)
-
-    def get_speed_at_hour(self, hour: int) -> float:
-        return self.hourly_speeds.get(hour, 30.0)
-
-    def get_availability_at_hour(self, hour: int) -> float:
-        return self.hourly_availability.get(hour, 0.0)
-
-    def get_average_speed(self) -> float:
-        if not self.hourly_speeds:
-            return 30.0
-        return np.mean(list(self.hourly_speeds.values()))
-
-    def get_average_availability(self) -> float:
-        if not self.hourly_availability:
-            return 5.0
-        return np.mean(list(self.hourly_availability.values()))
 
 
 @dataclass

@@ -1,25 +1,30 @@
+import bisect
 import networkx as nx
 import numpy as np
-from typing import Dict, List
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
 from config import EVConfig, ChargingStation, PathObjectives
 
 
-class RoutePlanner:
+class EVRoutePlanner:
 
     def __init__(self, graph: nx.DiGraph, stations: Dict, speed_data: Dict,
-                 availability_data: Dict, ev_config: EVConfig):
+                 availability_data: Dict, ev_config: EVConfig,
+                 speed_timestamps: List = None, availability_timestamps: List = None):
         self.graph = graph
         self.ev_stations = stations
         self.traffic_data = speed_data
         self.availability_data = availability_data
         self.ev_config = ev_config
 
+        self.speed_timestamps = sorted(speed_timestamps) if speed_timestamps else []
+        self.availability_timestamps = sorted(availability_timestamps) if availability_timestamps else []
+
         self.node_to_stations = {}
         for station in stations.values():
-            node = station.nearest_road_node
-            if node:
-                self.node_to_stations.setdefault(node, []).append(station)
+            if station.src_node:
+                self.node_to_stations.setdefault(station.src_node, []).append(station)
 
     def has_charging(self, node) -> bool:
         return node in self.node_to_stations
@@ -41,13 +46,16 @@ class RoutePlanner:
                 total += dist * self.ev_config.consumption_kwh_per_km
         return total
 
-    def get_charging_stops(self, path: List, departure_hour: int = 8) -> List:
+    def get_charging_stops(self, path: List, departure_time: datetime = None) -> List:
         if len(path) < 2:
             return []
 
+        if departure_time is None:
+            departure_time = datetime.now().replace(hour=8, minute=0, second=0)
+
         stops = []
         soc = self.ev_config.current_soc
-        hour = departure_hour
+        current_time = departure_time
         cfg = self.ev_config
 
         for i in range(len(path) - 1):
@@ -60,7 +68,7 @@ class RoutePlanner:
             dist = edge.get('distance_km', 0)
             site_id = edge.get('site_id', '')
 
-            speed = self._get_speed(site_id, int(hour))
+            speed = self._get_speed(site_id, current_time)
             travel_hours = dist / speed if speed > 0 else dist / 30.0
 
             soc -= (dist * cfg.consumption_kwh_per_km) / cfg.battery_capacity_kwh
@@ -74,16 +82,22 @@ class RoutePlanner:
                         stops.append(next_node)
                         charge_hours = energy_needed / (stations[0].charging_power_kw * cfg.charging_efficiency)
                         soc = cfg.target_charge_soc
-                        hour = (hour + travel_hours + charge_hours) % 24
+                        current_time += timedelta(hours=travel_hours + charge_hours)
                         continue
 
-            hour = (hour + travel_hours) % 24
+            current_time += timedelta(hours=travel_hours)
 
         return stops
 
-    def evaluate(self, path: List, departure_hour: int = 8) -> PathObjectives:
+    def get_charging_stops_in_path(self, path: List, departure_time: datetime = None) -> List:
+        return self.get_charging_stops(path, departure_time)
+
+    def evaluate(self, path: List, departure_time: datetime = None) -> PathObjectives:
         if len(path) < 2:
             return self._invalid_result()
+
+        if departure_time is None:
+            departure_time = datetime.now().replace(hour=8, minute=0, second=0)
 
         total_dist = 0
         total_travel = 0
@@ -91,7 +105,7 @@ class RoutePlanner:
         num_stops = 0
 
         soc = self.ev_config.current_soc
-        hour = departure_hour
+        current_time = departure_time
         cfg = self.ev_config
 
         for i in range(len(path) - 1):
@@ -104,7 +118,7 @@ class RoutePlanner:
             dist = edge.get('distance_km', 0)
             site_id = edge.get('site_id', '')
 
-            speed = self._get_speed(site_id, int(hour))
+            speed = self._get_speed(site_id, current_time)
             travel_hours = dist / speed if speed > 0 else dist / 30.0
             travel_min = travel_hours * 60
 
@@ -125,10 +139,10 @@ class RoutePlanner:
                         total_charge += charge_min
                         num_stops += 1
                         soc = cfg.target_charge_soc
-                        hour = (hour + travel_hours + charge_hours) % 24
+                        current_time += timedelta(hours=travel_hours + charge_hours)
                         continue
 
-            hour = (hour + travel_hours) % 24
+            current_time += timedelta(hours=travel_hours)
 
         return PathObjectives(
             distance_km=total_dist,
@@ -180,16 +194,55 @@ class RoutePlanner:
 
         return best_path
 
-    def _get_speed(self, site_id: str, hour: int) -> float:
-        if site_id in self.traffic_data and hour in self.traffic_data[site_id]:
-            speed_mph = self.traffic_data[site_id][hour]
-            if speed_mph < 10:
-                return 30.0
-            return speed_mph * 1.60934
-        return 30.0
+    def _get_speed(self, site_id: str, current_time: datetime) -> float:
+        if site_id not in self.traffic_data:
+            return 30.0
 
-    def get_charging_stops_in_path(self, path: List, departure_hour: int = 8) -> List:
-        return self.get_charging_stops(path, departure_hour)
+        site_speeds = self.traffic_data[site_id]
+        if not site_speeds:
+            return 30.0
+
+        nearest_ts = self._find_nearest_timestamp(current_time, self.speed_timestamps)
+        if nearest_ts is None or nearest_ts not in site_speeds:
+            return 30.0
+
+        speed_mph = site_speeds[nearest_ts]
+        if speed_mph < 10:
+            return 30.0
+
+        return speed_mph * 1.60934
+
+    def _get_availability(self, site_id: str, current_time: datetime) -> float:
+        if site_id not in self.availability_data:
+            return 5.0
+
+        site_avail = self.availability_data[site_id]
+        if not site_avail:
+            return 5.0
+
+        nearest_ts = self._find_nearest_timestamp(current_time, self.availability_timestamps)
+        if nearest_ts is None or nearest_ts not in site_avail:
+            return 5.0
+
+        return site_avail[nearest_ts]
+
+    def _find_nearest_timestamp(self, target: datetime, timestamps: List) -> Optional[datetime]:
+        if not timestamps:
+            return None
+
+        idx = bisect.bisect_left(timestamps, target)
+
+        if idx == 0:
+            return timestamps[0]
+        if idx == len(timestamps):
+            return timestamps[-1]
+
+        before = timestamps[idx - 1]
+        after = timestamps[idx]
+
+        if (target - before).total_seconds() <= (after - target).total_seconds():
+            return before
+        return after
 
     def _invalid_result(self) -> PathObjectives:
         return PathObjectives(

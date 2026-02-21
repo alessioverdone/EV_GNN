@@ -5,12 +5,12 @@ from typing import List, Tuple, Dict
 from geopy.distance import geodesic
 
 from config import PathObjectives
-from route_planner import RoutePlanner
+from route_planner import EVRoutePlanner
 
 
 class NSGAIIOptimizer:
 
-    def __init__(self, planner: RoutePlanner):
+    def __init__(self, planner: EVRoutePlanner):
         self.planner = planner
         self.graph = planner.graph
 
@@ -40,15 +40,7 @@ class NSGAIIOptimizer:
         population = biased + random_paths
         print(f"Generated: {len(biased)} biased + {len(random_paths)} random = {len(population)} paths")
 
-        while len(population) < size:
-            base = random.choice(population)
-            mutated = self._mutate(base.copy(), rate=0.3)
-            if mutated and not self._is_similar(mutated, population):
-                population.append(mutated)
-            else:
-                population.append(base.copy())
-
-        return population[:size]
+        return population
 
     def _generate_biased_paths(self, start, end, target: int) -> List[List]:
         paths = []
@@ -80,7 +72,7 @@ class NSGAIIOptimizer:
             if site_id in self.planner.traffic_data:
                 speeds = list(self.planner.traffic_data[site_id].values())
                 if speeds:
-                    speed = max(np.mean(speeds), 5.0) * 1.60934
+                    speed = max(np.mean(speeds), 5.0)
             return dist / speed
 
         try:
@@ -90,32 +82,14 @@ class NSGAIIOptimizer:
         except:
             pass
 
-        def combined_weight(u, v, d):
-            dist = d.get('distance_km', 1.0)
-            site_id = d.get('site_id', '')
-
-            speed = 30.0
-            if site_id in self.planner.traffic_data:
-                speeds = list(self.planner.traffic_data[site_id].values())
-                if speeds:
-                    speed = max(np.mean(speeds), 5.0) * 1.60934
-
-            avail = 1.0
-            if site_id in self.planner.availability_data:
-                avails = list(self.planner.availability_data[site_id].values())
-                if avails:
-                    avail = max(np.mean(avails), 0.1)
-
-            return (dist / speed) * (1 + 0.5 / (avail + 0.1))
-
-        try:
-            combined = nx.shortest_path(self.graph, start, end, weight=combined_weight)
-            if not self._is_similar(combined, existing + paths):
-                paths.append(combined)
-        except:
-            pass
-
         return paths
+
+    def _get_avg_availability(self, site_id: str) -> float:
+        if site_id in self.planner.availability_data:
+            values = list(self.planner.availability_data[site_id].values())
+            if values:
+                return np.mean(values)
+        return 0.0
 
     def _availability_paths(self, start, end, target: int, existing: List) -> List[List]:
         paths = []
@@ -123,7 +97,7 @@ class NSGAIIOptimizer:
         if not self.planner.ev_stations:
             return paths
 
-        stations = [(sid, s, s.get_average_availability())
+        stations = [(sid, s, self._get_avg_availability(sid))
                     for sid, s in self.planner.ev_stations.items()]
         stations.sort(key=lambda x: x[2], reverse=True)
 

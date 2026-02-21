@@ -15,6 +15,8 @@ class ChicagoDataProcessor:
         self.stations = {}
         self.speed_data = {}
         self.availability_data = {}
+        self.speed_timestamps = []
+        self.availability_timestamps = []
         self.node_coords = {}
         self.edge_to_site = {}
         self.site_to_edge = {}
@@ -34,7 +36,8 @@ class ChicagoDataProcessor:
             self._filter_to_largest_component()
 
         print("\nData loading complete!")
-        return self.graph, self.stations, self.speed_data, self.availability_data
+        return (self.graph, self.stations, self.speed_data, self.availability_data,
+                self.speed_timestamps, self.availability_timestamps)
 
     def _load_network(self):
         edges_path = f'{self.data_path}/edges_df.csv'
@@ -103,29 +106,24 @@ class ChicagoDataProcessor:
             }
 
             self.graph.add_edge(src, tgt, **edge_attrs)
+            self.graph.add_edge(tgt, src, **edge_attrs)
 
             self.edge_to_site[(src, tgt)] = site_id
+            self.edge_to_site[(tgt, src)] = site_id
             self.site_to_edge[site_id] = (src, tgt)
 
-            self._create_station(site_id, src, tgt, edge_id, distance)
+            self._create_station(site_id, src, tgt)
 
-    def _create_station(self, site_id, src, tgt, edge_id, distance):
+    def _create_station(self, site_id, src, tgt):
         src_coords = self.node_coords.get(src, (0, 0))
-        tgt_coords = self.node_coords.get(tgt, (0, 0))
-
-        lat = (src_coords[0] + tgt_coords[0]) / 2
-        lon = (src_coords[1] + tgt_coords[1]) / 2
 
         station = ChargingStation(
             station_id=site_id,
             name=f"Station {site_id}",
-            latitude=lat,
-            longitude=lon,
+            latitude=src_coords[0],
+            longitude=src_coords[1],
             src_node=src,
-            tgt_node=tgt,
-            edge_id=edge_id,
-            edge_distance_km=distance,
-            nearest_road_node=src
+            tgt_node=tgt
         )
         self.stations[site_id] = station
 
@@ -136,20 +134,15 @@ class ChicagoDataProcessor:
             return
 
         df = pd.read_csv(path)
-        df['hour'] = pd.to_datetime(df['timestamp']).dt.hour
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
 
         site_cols = [c for c in df.columns if c.startswith('site_')]
         print(f"  Speed data: {len(df)} timestamps, {len(site_cols)} sites")
 
-        for site in site_cols:
-            hourly = {}
-            for hour in range(24):
-                values = df[df['hour'] == hour][site].dropna()
-                hourly[hour] = float(values.mean()) if len(values) > 0 else 30.0
+        self.speed_timestamps = df['timestamp'].tolist()
 
-            self.speed_data[site] = hourly
-            if site in self.stations:
-                self.stations[site].hourly_speeds = hourly
+        for site in site_cols:
+            self.speed_data[site] = dict(zip(df['timestamp'], df[site].fillna(30.0)))
 
     def _load_availability_predictions(self):
         path = f'{self.data_path}/predictions_Available.csv'
@@ -158,20 +151,15 @@ class ChicagoDataProcessor:
             return
 
         df = pd.read_csv(path)
-        df['hour'] = pd.to_datetime(df['timestamp']).dt.hour
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
 
         site_cols = [c for c in df.columns if c.startswith('site_')]
         print(f"  Availability data: {len(df)} timestamps, {len(site_cols)} sites")
 
-        for site in site_cols:
-            hourly = {}
-            for hour in range(24):
-                values = df[df['hour'] == hour][site].dropna()
-                hourly[hour] = float(values.mean()) if len(values) > 0 else 5.0
+        self.availability_timestamps = df['timestamp'].tolist()
 
-            self.availability_data[site] = hourly
-            if site in self.stations:
-                self.stations[site].hourly_availability = hourly
+        for site in site_cols:
+            self.availability_data[site] = dict(zip(df['timestamp'], df[site].fillna(5.0)))
 
     def _filter_to_largest_component(self):
         print("\nFiltering to largest component...")
@@ -209,15 +197,23 @@ class ChicagoDataProcessor:
     def get_station(self, site_id: str) -> Optional[ChargingStation]:
         return self.stations.get(site_id)
 
-    def get_speed(self, site_id: str, hour: int) -> float:
+    def get_speed(self, site_id: str, timestamp) -> float:
         if site_id in self.speed_data:
-            return self.speed_data[site_id].get(hour, 30.0)
+            if timestamp in self.speed_data[site_id]:
+                return self.speed_data[site_id][timestamp]
         return 30.0
 
-    def get_availability(self, site_id: str, hour: int) -> float:
+    def get_availability(self, site_id: str, timestamp) -> float:
         if site_id in self.availability_data:
-            return self.availability_data[site_id].get(hour, 5.0)
+            if timestamp in self.availability_data[site_id]:
+                return self.availability_data[site_id][timestamp]
         return 5.0
+
+    def get_nearest_timestamp(self, target_time, data_type='speed'):
+        timestamps = self.speed_timestamps if data_type == 'speed' else self.availability_timestamps
+        if not timestamps:
+            return None
+        return min(timestamps, key=lambda t: abs((t - target_time).total_seconds()))
 
     def get_statistics(self) -> Dict:
         stats = {
@@ -228,11 +224,18 @@ class ChicagoDataProcessor:
             'availability_sites': len(self.availability_data),
         }
 
-        if self.stations:
-            speeds = [s.get_average_speed() for s in self.stations.values()]
-            avails = [s.get_average_availability() for s in self.stations.values()]
+        if self.speed_data:
+            all_speeds = []
+            for site_speeds in self.speed_data.values():
+                all_speeds.extend(site_speeds.values())
+            if all_speeds:
+                stats['avg_speed'] = np.mean(all_speeds)
 
-            stats['avg_speed'] = np.mean(speeds)
-            stats['avg_availability'] = np.mean(avails)
+        if self.availability_data:
+            all_avails = []
+            for site_avails in self.availability_data.values():
+                all_avails.extend(site_avails.values())
+            if all_avails:
+                stats['avg_availability'] = np.mean(all_avails)
 
         return stats
