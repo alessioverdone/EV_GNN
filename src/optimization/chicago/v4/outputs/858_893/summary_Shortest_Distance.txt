@@ -1,0 +1,23 @@
+SHORTEST DISTANCE SUMMARY
+
+OVERALL:
+ Total Distance: 50.52 km
+ Travel Time: 103.8 minutes (1.73 hours)
+ Charging Time: 42.7 minutes (0.71 hours)
+ Total Time: 146.5 minutes
+ Number of Charging Stops: 1
+ Final Battery SOC: 75.0%
+
+CHARGING STOPS (1):
+
+  Stop 1:
+ Location: 838
+ Station: Station site_850
+ Station ID: site_850
+ Charging Power: 50.0 kW
+ Avg Availability: -0.0 chargers
+
+PATH:
+  Number of nodes: 55
+  Start: 858
+  End: 893

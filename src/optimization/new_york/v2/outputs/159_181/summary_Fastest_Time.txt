@@ -1,0 +1,23 @@
+FASTEST TIME SUMMARY
+
+OVERALL:
+ Total Distance: 125.36 km
+ Travel Time: 92.5 minutes (1.54 hours)
+ Charging Time: 42.6 minutes (0.71 hours)
+ Total Time: 135.1 minutes
+ Number of Charging Stops: 1
+ Final Battery SOC: 59.9%
+
+CHARGING STOPS (1):
+
+  Stop 1:
+ Location: 96
+ Station: Station site_104
+ Station ID: site_104
+ Charging Power: 50.0 kW
+ Avg Availability: -0.0 chargers
+
+PATH:
+  Number of nodes: 86
+  Start: 159
+  End: 181
