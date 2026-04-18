@@ -84,6 +84,11 @@ def resample_to_common_time(A: torch.Tensor,
     -------
     A_res, B_res : torch.Tensor
         Resampled tensors with shapes (N_A, T_target, F_A) and (N_B, T_target, F_B)
+
+    Example
+    A: (913, 1378, 3), B: (121, 1339, 4)
+    A_res, B_res = resample_to_common_time(A, B, target="A", method="linear")
+    A_res.shape == (913, 1378, 3), B_res.shape == (121, 1378, 4)
     """
     assert A.ndim == 3 and B.ndim == 3, "Expected A and B with shape (N, T, F)"
     T_A = A.shape[1]
@@ -130,7 +135,4 @@ def resample_to_common_time(A: torch.Tensor,
     B_res = _resample(B)
     return A_res, B_res
 
-# ---------- example usage ----------
-# A: (913, 1378, 3), B: (121, 1339, 4)
-# A_res, B_res = resample_to_common_time(A, B, target="A", method="linear")
-# Now: A_res.shape == (913, 1378, 3), B_res.shape == (121, 1378, 4)
+

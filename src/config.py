@@ -1,24 +1,28 @@
 import os
 import json
+from pathlib import Path
 
 import torch
 
 
 class Parameters:
+    project_path = str(Path(__file__).resolve().parents[1])
+
     # Datasets and paths
     save_preprocessed_data = False  # related to traffic_temporal_data_processed
     load_preprocessed_data = False  # related to traffic_temporal_data_processed
     use_traffic_metadata_processed = True
     use_traffic_temporal_data_processed = False
     dataset_name = 'newyork'  # ['METR-LA', 'Electricity']
-    project_path = r'C:\Users\Grid\Desktop\pc_nuovo\backup pc nuovo\PhD\EV\code\EV_GNN_repo\EV_GNN'
+    # project_path = '/home/user/Scrivania/PhD/EV/code/EV_GNN_repo_2b/EV_GNN'
 
-    preprocessed_dataset_path = os.path.join(project_path, 'data', 'dev', dataset_name)
-    traffic_temporal_data_folder = os.path.join(project_path, 'data', dataset_name, 'traffic/traffic_data')
-    traffic_metadata_file = os.path.join(project_path, 'data', dataset_name, 'traffic/processed_newyork_traffic_graph.csv')
-    ev_temporal_data_folder =os.path.join(project_path, 'data', dataset_name, 'ev/stations_connectors_counts_data')
-    ev_metadata_file = os.path.join(project_path, 'data', dataset_name, 'ev/location_meta_data.csv')
+    # preprocessed_dataset_path = os.path.join(project_path, 'data', 'dev', dataset_name)
+    traffic_temporal_data_folder = os.path.join(project_path, 'data', dataset_name, 'traffic', 'traffic_data')
+    traffic_metadata_file = os.path.join(project_path, 'data', dataset_name, 'traffic', 'processed_newyork_traffic_graph.csv')
+    ev_temporal_data_folder =os.path.join(project_path, 'data', dataset_name, 'ev', 'stations_connectors_counts_data')
+    ev_metadata_file = os.path.join(project_path, 'data', dataset_name, 'ev', 'location_meta_data.csv')
     chkpt_dir = ''
+    logs_dir = os.path.join(project_path, 'registry', 'logs')
     default_save_tensor_name = '_processed_tensors'
 
     # Training parameters
@@ -40,10 +44,11 @@ class Parameters:
     # LT Trainer parameters
     accelerator = 'gpu'
     log_every_n_steps = 300
-    max_epochs = 150
+    max_epochs = 5
     enable_progress_bar = True
-    check_val_every_n_epoch = 4
+    check_val_every_n_epoch = 2
     node_features = 24
+    limit_train_batches = 10
 
     # Data params
     num_nodes = 0
@@ -72,6 +77,7 @@ class Parameters:
     show = True
     num_samples_to_show = 1
     export_csv = True
+    visualize_data = True
 
     def __init__(self, params=None):
         # Show parser args
@@ -100,13 +106,13 @@ class Parameters:
         if self.num_of_traffic_nodes_limit != -1:
             self.num_nodes = self.num_of_traffic_nodes_limit
 
-        self.preprocessed_data_path = os.path.join(self.project_path, 'dataset', self.dataset_name)
-        self.preprocessed_dataset_path = os.path.join(self.project_path, 'data', 'dev', self.dataset_name)
-        self.traffic_temporal_data_folder = os.path.join(self.project_path, 'data', self.dataset_name, 'traffic/traffic_data')
-        self.traffic_metadata_file = os.path.join(self.project_path, 'data', self.dataset_name,
+        self.preprocessed_data_path = os.path.join(self.project_path, 'data', 'processed', self.dataset_name)
+        # self.preprocessed_dataset_path = os.path.join(self.project_path, 'data', 'processed', self.dataset_name)
+        self.traffic_temporal_data_folder = os.path.join(self.project_path, 'data', 'raw', self.dataset_name, 'traffic/traffic_data')
+        self.traffic_metadata_file = os.path.join(self.project_path, 'data',  'raw', self.dataset_name,
                                              'traffic/processed_newyork_traffic_graph.csv')
-        self.ev_temporal_data_folder = os.path.join(self.project_path, 'data', self.dataset_name, 'ev/stations_connectors_counts_data')
-        self.ev_metadata_file = os.path.join(self.project_path, 'data', self.dataset_name, 'ev/location_meta_data.csv')
+        self.ev_temporal_data_folder = os.path.join(self.project_path, 'data',  'raw', self.dataset_name, 'ev/stations_connectors_counts_data')
+        self.ev_metadata_file = os.path.join(self.project_path, 'data',  'raw', self.dataset_name, 'ev/location_meta_data.csv')
 
         self.dirpath_save_ckpt = os.path.join(self.project_path, 'registry', 'checkpoints', f'ckpt_{self.dataset_name}')
         self.dirpath_save_config = os.path.join(self.project_path, 'registry', 'configurations', f'config_{self.id_run}.json')

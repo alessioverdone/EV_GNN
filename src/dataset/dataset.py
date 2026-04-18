@@ -19,11 +19,12 @@ from tsl.datasets import MetrLA, Elergone
 from torch_geometric.data import Data
 
 from src.config import Parameters
+from src.dataset.preprocessing_metadata import process_traffic_metadata_newyork
 from src.dataset.resamplling import resample_to_common_time
+from src.dataset.visualize_data import visualize_processed_graph
 from src.dataset.utils import (create_adjacency_matrix, haversine, build_edges_with_node_ids, \
                                create_adjacency_matrix_newyork, augment_graph_df_v3, append_along_N_torch,
-                               build_edges_with_node_ids_chicago,
-                               process_traffic_metadata_newyork)
+                               build_edges_with_node_ids_chicago, clean_tensor)
 from src.utils.utils import directed_to_undirected, edge_to_node_aggregation
 
 
@@ -56,18 +57,22 @@ class EVDataModule(LightningDataModule):
         elif self.run_params.dataset_name == 'newyork':
             self.run_params.traffic_temporal_data_folder = os.path.join(self.run_params.project_path,
                                                                         'data',
+                                                                        'raw',
                                                                         self.run_params.dataset_name,
                                                                         'traffic/traffic_data')
             self.run_params.traffic_metadata_file = os.path.join(self.run_params.project_path,
                                                                  'data',
+                                                                 'raw',
                                                                  self.run_params.dataset_name,
                                                                  'traffic/processed_newyork_traffic_graph.csv')
             self.run_params.ev_temporal_data_folder = os.path.join(self.run_params.project_path,
                                                                    'data',
+                                                                   'raw',
                                                                    self.run_params.dataset_name,
                                                                    'ev/stations_connectors_counts_data')
             self.run_params.ev_metadata_file = os.path.join(self.run_params.project_path,
                                                             'data',
+                                                            'raw',
                                                             self.run_params.dataset_name,
                                                             'ev/location_meta_data.csv')
             self.run_params.traffic_columns_to_use = ["speed", "travel_time"]
@@ -83,18 +88,22 @@ class EVDataModule(LightningDataModule):
         elif self.run_params.dataset_name == 'chicago':
             self.run_params.traffic_temporal_data_folder = os.path.join(self.run_params.project_path,
                                                                         'data',
+                                                                        'raw',
                                                                         self.run_params.dataset_name,
                                                                         'traffic/traffic')
             self.run_params.traffic_metadata_file = os.path.join(self.run_params.project_path,
                                                                  'data',
+                                                                 'raw',
                                                                  self.run_params.dataset_name,
                                                                  'traffic/location_summary.csv')
             self.run_params.ev_temporal_data_folder = os.path.join(self.run_params.project_path,
                                                                    'data',
+                                                                   'raw',
                                                                    self.run_params.dataset_name,
                                                                    'ev/ev_locations_availability')
             self.run_params.ev_metadata_file = os.path.join(self.run_params.project_path,
                                                             'data',
+                                                            'raw',
                                                             self.run_params.dataset_name,
                                                             'ev/ev_location_metadata.csv')
             self.run_params.traffic_columns_to_use = ["speed", "length"]
@@ -550,7 +559,7 @@ class DatasetNewyork(Dataset):
 
             self.nodes_df = pd.read_csv(preprocessed_nodes_df)
             self.edges_df = pd.read_csv(preprocessed_edges_df)
-            self.added__df = pd.read_csv(preprocessed_added_edges_df)
+            self.added_edges_df = pd.read_csv(preprocessed_added_edges_df)
 
             self.preprocess_and_assemble_data()
         else:
@@ -587,6 +596,9 @@ class DatasetNewyork(Dataset):
             # Assign EV temporal features to the nearest traffic nodes and then traffic edges
             self.assign_ev_node_to_traffic_node()
 
+            # # Clean data of -1 values by substituting channel and node mean values
+            # self.final_temporal_merged_data = clean_tensor(self.final_temporal_merged_data)
+
             # Save or load
             torch.save(self.final_temporal_merged_data, preprocessed_filepath_merged_data)
             torch.save(self.time_column, preprocessed_filepath_time_column)
@@ -612,15 +624,15 @@ class DatasetNewyork(Dataset):
             # Normalize and stack data into fixed-size input/output windows objects
             self.preprocess_and_assemble_data()
 
-    def load_preprocessed_data(self):
-        """
-        Load preprocessed data after temporal alignment and resolution resampling
-        """
-        load_tensor = torch.load(os.path.join(self.params.preprocessed_dataset_path,
-                                              f"{self.params.dataset_name}{self.params.default_save_tensor_name}.pt"))
-        data_tensor_traffic = load_tensor["data_tensor_traffic"]
-        data_tensor_ev = load_tensor["data_tensor_ev"]
-        return data_tensor_traffic, data_tensor_ev
+    # def load_preprocessed_data(self):
+    #     """
+    #     Load preprocessed data after temporal alignment and resolution resampling
+    #     """
+    #     load_tensor = torch.load(os.path.join(self.params.preprocessed_dataset_path,
+    #                                           f"{self.params.dataset_name}{self.params.default_save_tensor_name}.pt"))
+    #     data_tensor_traffic = load_tensor["data_tensor_traffic"]
+    #     data_tensor_ev = load_tensor["data_tensor_ev"]
+    #     return data_tensor_traffic, data_tensor_ev
 
     def check_traffic_ev_time(self):
         """
@@ -1260,6 +1272,9 @@ class DatasetNewyork(Dataset):
         print('Traffic and EV temporal data merging completed!')
 
     def preprocess_and_assemble_data(self):
+        # Clean data of -1 values by substituting channel and node mean values
+        self.final_temporal_merged_data = clean_tensor(self.final_temporal_merged_data)
+
         # Prepare final data
         stacked_target = self.final_temporal_merged_data.to('cpu')
         self.number_of_station = self.final_temporal_merged_data.shape[0]
@@ -1303,6 +1318,17 @@ class DatasetNewyork(Dataset):
                                           y=torch.FloatTensor(self.targets[i]),
                                           time_input=self.time_input[i],
                                           time_output=self.time_output[i]), )
+
+        if  self.params.visualize_data:
+            visualize_processed_graph(
+                edges_df=self.edges_df,
+                added_edges_df=self.added_edges_df,
+                nodes_df=self.nodes_df,
+                highlight_added=True,
+                file_html=os.path.join(self.params.preprocessed_data_path, 'processed_graph.html'),
+            )
+
+
 
     def __len__(self):
         return len(self.encoded_data)
@@ -1360,8 +1386,12 @@ class DatasetChicago(Dataset):
                                                          'edge_weights_traffic.pt')
         preprocessed_map_ev_node_traffic_node = os.path.join(self.params.preprocessed_data_path,
                                                          'map_ev_node_traffic_node.pt')
+        preprocessed_map_real_ev_node_traffic_node = os.path.join(self.params.preprocessed_data_path,
+                                                         'map_real_ev_node_traffic_node.pt')
         preprocessed_dataset_config = os.path.join(self.params.preprocessed_data_path,
                                                    'dataset_config.pt')
+        preprocessed_merged_traffic_nodes_map = os.path.join(self.params.preprocessed_data_path,
+                                                             'merged_traffic_nodes_map.pt')
         preprocessed_nodes_df = os.path.join(self.params.preprocessed_data_path,
                                                    'nodes_df.csv')
         preprocessed_edges_df = os.path.join(self.params.preprocessed_data_path,
@@ -1377,12 +1407,16 @@ class DatasetChicago(Dataset):
                 os.path.exists(preprocessed_nodes_df) and
                 os.path.exists(preprocessed_edges_df) and
                 os.path.exists(preprocessed_added_edges_df) and
-                os.path.exists(preprocessed_map_ev_node_traffic_node)):
+                os.path.exists(preprocessed_map_ev_node_traffic_node) and
+                os.path.exists(preprocessed_map_real_ev_node_traffic_node)and
+                os.path.exists(preprocessed_merged_traffic_nodes_map)):
             self.final_temporal_merged_data = torch.load(preprocessed_filepath_merged_data, weights_only=False)
             self.time_column = torch.load(preprocessed_filepath_time_column, weights_only=False)
             self.edge_index_traffic = torch.load(preprocessed_edge_index_traffic, weights_only=False)
             self.edge_weights_traffic = torch.load(preprocessed_edge_weights_traffic, weights_only=False)
             self.map_ev_node_traffic_node = torch.load(preprocessed_map_ev_node_traffic_node, weights_only=False)
+            self.map_real_ev_node_traffic_node = torch.load(preprocessed_map_real_ev_node_traffic_node, weights_only=False)
+            self.merged_traffic_nodes_map = torch.load(preprocessed_merged_traffic_nodes_map, weights_only=False)
 
             self.dataset_config = torch.load(preprocessed_dataset_config, weights_only=False)
             self.number_of_station = self.dataset_config["number_of_station"]
@@ -1397,7 +1431,7 @@ class DatasetChicago(Dataset):
 
             self.nodes_df = pd.read_csv(preprocessed_nodes_df)
             self.edges_df = pd.read_csv(preprocessed_edges_df)
-            self.added__df = pd.read_csv(preprocessed_added_edges_df)
+            self.added_edges_df = pd.read_csv(preprocessed_added_edges_df)
 
             self.preprocess_and_assemble_data()
         else:
@@ -1406,16 +1440,6 @@ class DatasetChicago(Dataset):
             self.filepaths = sorted(glob.glob(os.path.join(self.params.traffic_temporal_data_folder, "*.csv")))
             if not self.filepaths:
                 raise RuntimeError(f"No CSV founded in {self.params.traffic_temporal_data_folder}")
-
-            # # Check if preprocessed traffic data already exists. Be careful to use same creation parameters
-            # processed_traffic_temporal_data_exist = os.path.exists(os.path.join(self.params.preprocessed_dataset_path,
-            #                                                                     f"{self.params.dataset_name}{self.params.default_save_tensor_name}.pt"))
-            #
-            # # If you don't want to use preprocessed data or preprocessed data doesn't exist
-            # if not (self.params.use_traffic_temporal_data_processed and processed_traffic_temporal_data_exist):
-
-            # # Process metadata
-            # process_traffic_metadata_chicago(self.params, self.params.traffic_metadata_file)
 
             # Find temporal intersection window
             self.check_traffic_ev_time()
@@ -1439,12 +1463,17 @@ class DatasetChicago(Dataset):
             # Assign EV temporal features to the nearest traffic nodes and then traffic edges
             self.assign_ev_node_to_traffic_node()
 
+            # # Clean data of -1 values by substituting channel and node mean values
+            self.final_temporal_merged_data = clean_tensor(self.final_temporal_merged_data)
+
             # Save or load
             torch.save(self.final_temporal_merged_data, preprocessed_filepath_merged_data)
             torch.save(self.time_column, preprocessed_filepath_time_column)
             torch.save(self.edge_index_traffic, preprocessed_edge_index_traffic)
             torch.save(self.edge_weights_traffic, preprocessed_edge_weights_traffic)
             torch.save(self.map_ev_node_traffic_node, preprocessed_map_ev_node_traffic_node)
+            torch.save(self.map_real_ev_node_traffic_node, preprocessed_map_real_ev_node_traffic_node)
+            torch.save(self.merged_traffic_nodes_map, preprocessed_merged_traffic_nodes_map)
             self.nodes_df.to_csv(preprocessed_nodes_df)
             self.edges_df.to_csv(preprocessed_edges_df)
             self.added_edges_df.to_csv(preprocessed_added_edges_df)
@@ -1462,16 +1491,6 @@ class DatasetChicago(Dataset):
 
             # Normalize and stack data into fixed-size input/output windows objects
             self.preprocess_and_assemble_data()
-
-    def load_preprocessed_data(self):
-        """
-        Load preprocessed data after temporal alignment and resolution resampling
-        """
-        load_tensor = torch.load(os.path.join(self.params.preprocessed_dataset_path,
-                                              f"{self.params.dataset_name}{self.params.default_save_tensor_name}.pt"))
-        data_tensor_traffic = load_tensor["data_tensor_traffic"]
-        data_tensor_ev = load_tensor["data_tensor_ev"]
-        return data_tensor_traffic, data_tensor_ev
 
     def check_traffic_ev_time(self):
         """
@@ -1824,26 +1843,32 @@ class DatasetChicago(Dataset):
                 f'Loaded Traffic data from csv files by rows: {self.N_t} edges, {self.T_t} rows (tail), {self.M_t} features')
 
     def get_edges_traffic(self,
-                          threshold: float = 0.001,
+                          threshold: float = 0.001,  # 1mm
                           distances_col='length'):
         """
         Function for creating the graph. Staring by traffic sites, we first build the original graph.
         Then, if the graph is not connected, we add fake edges to guarantee the connectivity of the graph.
-        TO each fake edges is correlated zeros features.
+        To each fake edges is correlated zeros features.
+        We merge also too close nodes in order to avoid road crossing with 4 nodes instead of 1
         """
         # Load traffic metadata
         data = pd.read_csv(self.params.traffic_metadata_file)
         data_sorted = data.sort_values(by="id")
 
-        # Original edges
-        edges_df, self.nodes_df = build_edges_with_node_ids_chicago(data_sorted,
+        # Original edges, with  self.nodes_df: (id, lat, long) and edges_df: (id,src, tgt, distance, src_id, tgt_id)
+        edges_df, self.nodes_df, self.merged_traffic_nodes_map = build_edges_with_node_ids_chicago(data_sorted,
                                                                     threshold=threshold,
                                                                     distances_col=distances_col)  # exact match
 
         # Creates a set of unique arcs (normalizing orientation)
         unique_edges = set()
+        unique_edges_info = dict()
+        duplicate_temporal_data_info = dict()
         duplicates = []
+        ordinal_id_duplicates = []
+        row_id = -1
         for _, row in edges_df.iterrows():
+            row_id += 1
             u_id = int(row['src_id'])
             v_id = int(row['tgt_id'])
 
@@ -1851,18 +1876,39 @@ class DatasetChicago(Dataset):
             if u_id > v_id:
                 u_id, v_id = v_id, u_id
             edge = frozenset((u_id, v_id))
+
+            # Duplicate info saving
             if edge in unique_edges:
                 duplicates.append(row)
+                ordinal_id_duplicates.append(row_id)
+
+                # Collect info to merge temporal data
+                if edge not in duplicate_temporal_data_info.keys():
+                    duplicate_temporal_data_info[edge] = [[unique_edges_info[edge], (row['id'], row_id)]]
+                else:
+                    duplicate_temporal_data_info[edge].append([unique_edges_info[edge], (row['id'], row_id)])
             else:
                 unique_edges.add(edge)
+                unique_edges_info[edge] = (row['id'], row_id)
         id_duplicates = [elem['id'] for elem in duplicates]
+
+        # First, sum/mean up duplicated information
+        for list_of_duplicates_per_edge_key in duplicate_temporal_data_info.keys():
+            temporal_edge_info = list()
+            temporal_edge_info.append(self.data_tensor_traffic[list(list_of_duplicates_per_edge_key)[1],:,:].unsqueeze(dim=0))
+            for edges_ids in duplicate_temporal_data_info[list_of_duplicates_per_edge_key]:
+                for id in edges_ids:
+                    temporal_edge_info.append(self.data_tensor_traffic[id[1],:,:].unsqueeze(dim=0))
+
+            temporal_edge_info = torch.stack(temporal_edge_info, dim=0)
+            self.data_tensor_traffic[list(list_of_duplicates_per_edge_key)[1], :, :] = temporal_edge_info.sum(dim=0)
 
         # I delete duplicate arcs and update the index column
         edges_df = edges_df[~edges_df['id'].isin(id_duplicates)]
         edges_df['id'] = np.arange(len(edges_df))
 
         # Update temporal tensor to integrate duplicate arcs deletion
-        rows_to_keep = [i for i in range(self.data_tensor_traffic.shape[0]) if i not in id_duplicates]
+        rows_to_keep = [i for i in range(self.data_tensor_traffic.shape[0]) if i not in ordinal_id_duplicates]  # ERRORE: indici aggiornati e non cancella niente
         self.data_tensor_traffic = self.data_tensor_traffic[rows_to_keep]
 
         # Create original adjacency matrix (if needed)
@@ -1881,7 +1927,7 @@ class DatasetChicago(Dataset):
                                                                    num_nodes=len(self.nodes_df),
                                                                    distance=self.edges_df['distance'])
 
-        # Create graph based on distance threshold (in Km) (DELETE)
+        # Create graph based on distance threshold (in Km) (DELETE/UPDATE)
         edge_index, edge_weights = dense_to_sparse(torch.tensor(adj_matrix))
         edge_index, edge_weights = directed_to_undirected(edge_index, edge_weights)
         self.edge_index_traffic, self.edge_weights_traffic = edge_index.to('cuda'), edge_weights.to('cuda')
@@ -2024,18 +2070,20 @@ class DatasetChicago(Dataset):
                 continue
             else:
                 lat, lng = row[1]['Latitude'], row[1]['Longitude']
-                ev_coordinates.append((lat, lng))
+                loc_id = row[1]['LocID']
+                ev_coordinates.append((lat, lng, loc_id))
 
         # Map each EV node to nearest traffic node
         self.map_ev_node_traffic_node = {}
+        self.map_real_ev_node_traffic_node = {}
         print('Assigning EV to traffic nodes!')
         cont_ev = 0
-        for ev_node_idx, ev_coord in enumerate(ev_coordinates):
+        for ev_node_idx, ev_coord_and_id in enumerate(ev_coordinates):
             if cont_ev == self.params.num_of_ev_nodes_limit:
                 break
             min_dist = float('inf')
             min_dist_traffic_node_idx = -1
-            lat1, lon1 = ev_coord
+            lat1, lon1, loc_id = ev_coord_and_id
             cont_traffic = 0
             for row in self.nodes_df.iterrows():
                 if cont_traffic == self.params.num_of_traffic_nodes_limit:
@@ -2047,6 +2095,7 @@ class DatasetChicago(Dataset):
                     min_dist_traffic_node_idx = traffic_node_idx
                 cont_traffic += 1
             self.map_ev_node_traffic_node[ev_node_idx] = int(min_dist_traffic_node_idx)
+            self.map_real_ev_node_traffic_node[loc_id] = int(min_dist_traffic_node_idx)
             cont_ev += 1
 
         # Assign the combined temporal ev data (self.data_tensor_ev) to temporal traffic data (self.data_tensor_traffic)
@@ -2069,7 +2118,7 @@ class DatasetChicago(Dataset):
             elif len(elem) == 1:
                 new_temp_list.append(elem[0])
             else:
-                new_temp_list.append(torch.stack(elem).sum(0).squeeze(0))
+                new_temp_list.append(torch.stack(elem).sum(0).squeeze(0))  # mean?
 
         # Inner join con self.timestamp_final_traffic e check sincronicità
         self.ev_temporal_data_on_merged_nodes = torch.stack(new_temp_list)
@@ -2092,69 +2141,70 @@ class DatasetChicago(Dataset):
         tgt = torch.as_tensor(self.edges_df['tgt_id'].values, device=device)  # [E]
         N = nodes_ev.shape[0]
 
-        # gradi per nodo (evita div/0 con clamp)
+        # Degrees per node (avoid div/0 with clamp)
         deg = torch.bincount(torch.cat([src, tgt]), minlength=N).clamp(min=1)  # [N]
 
-        # pick EV dei capi e normalizza per grado
+        # Pick EV of the extremes and normalize by degree
         ev_u = nodes_ev[src] / deg[src].view(-1, 1, 1)  # [E,T,F_ev]
         ev_v = nodes_ev[tgt] / deg[tgt].view(-1, 1, 1)  # [E,T,F_ev]
 
-        # contributo EV edge = somma dei due capi normalizzati
+        # EV edge contribution = sum of the two normalized ends
         self.ev_edge_temporal_data = ev_u + ev_v  # [E,T,F_ev]
 
-        # concateni con le feature traffic sulle edge
+        # concatenate with feature traffic on the edges
         self.final_temporal_merged_data = torch.cat([self.data_tensor_traffic.to(device),
                                                      self.ev_edge_temporal_data],
                                                     dim=-1)
         self.traffic_features = self.data_tensor_traffic.shape[-1]
         self.ev_features = self.ev_edge_temporal_data.shape[-1]
 
-        # poi fai l'aggregazione edge->node (somma) come già fai
+        # then do the edge->node aggregation (sum) as you already do
         self.final_temporal_merged_data = edge_to_node_aggregation(self.edge_index_traffic,
                                                                    self.final_temporal_merged_data,
                                                                    len(self.nodes_df))
-        ############################################
-
         print('Traffic and EV temporal data merging completed!')
 
     def preprocess_and_assemble_data(self):
         """
         Normalize data for each channel and finally create dataset self.encoded_data
         """
+        # # Clean data of -1 values by substituting channel and node mean values
+        # self.final_temporal_merged_data = clean_tensor(self.final_temporal_merged_data)
+
         # Prepare final data
-        stacked_target = self.final_temporal_merged_data.to('cpu')
+        self.stacked_target = self.final_temporal_merged_data.to('cpu')
         self.number_of_station = self.final_temporal_merged_data.shape[0]
 
         # Calcola il Min e Max separato per ogni canale lungo le dimensioni (N, T)
-        self.min_vals_normalization = stacked_target.min(dim=0)[0].min(dim=0)[0]  # Min lungo (N, T) per ogni canale
-        self.max_vals_normalization = stacked_target.max(dim=0)[0].max(dim=0)[0]  # Max lungo (N, T) per ogni canale
+        self.min_vals_normalization = self.stacked_target.min(dim=0)[0].min(dim=0)[0]  # Min lungo (N, T) per ogni canale
+        self.max_vals_normalization = self.stacked_target.max(dim=0)[0].max(dim=0)[0]  # Max lungo (N, T) per ogni canale
 
         # Normalizza usando MinMax scaling
-        standardized_target = ((stacked_target - self.min_vals_normalization) /
+        self.standardized_target = ((self.stacked_target - self.min_vals_normalization) /
                                (self.max_vals_normalization - self.min_vals_normalization))
 
         # Input data
-        self.features = [standardized_target[:, i: i + self.params.lags, :]
+        self.features = [self.standardized_target[:, i: i + self.params.lags, :]
                          for i in
-                         range(0, standardized_target.shape[1] - self.params.lags - self.params.prediction_window,
+                         range(0, self.standardized_target.shape[1] - self.params.lags - self.params.prediction_window,
                                self.params.time_series_step)]
 
         # Output data
-        N = standardized_target.shape[0]
-        self.targets = [standardized_target[:, i:i + self.params.prediction_window, :].view(N, -1)
-                        for i in range(self.params.lags, standardized_target.shape[1] - self.params.prediction_window,
+        N = self.standardized_target.shape[0]
+        self.targets = [self.standardized_target[:, i:i + self.params.prediction_window, :].view(N, -1)
+                        for i in range(self.params.lags, self.standardized_target.shape[1] - self.params.prediction_window,
                                        self.params.time_series_step)]
 
         # Input time data
         self.time_input = [self.time_column[i: i + self.params.lags]
                            for i in
-                           range(0, standardized_target.shape[1] - self.params.lags - self.params.prediction_window,
+                           range(0, self.standardized_target.shape[1] - self.params.lags - self.params.prediction_window,
                                  self.params.time_series_step)]
 
         # Output time data
         self.time_output = [self.time_column[i:i + self.params.prediction_window]
                             for i in
-                            range(self.params.lags, standardized_target.shape[1] - self.params.prediction_window,
+                            range(self.params.lags, self.standardized_target.shape[1] - self.params.prediction_window,
                                   self.params.time_series_step)]
 
         # Collect processed data on list
@@ -2166,6 +2216,15 @@ class DatasetChicago(Dataset):
                                           time_input=self.time_input[i],
                                           time_output=self.time_output[i]))
 
+        if getattr(self.params, 'visualize_data', True):
+            visualize_processed_graph(
+                edges_df=self.edges_df,
+                added_edges_df=self.added_edges_df,
+                nodes_df=self.nodes_df,
+                highlight_added=True,
+                file_html=os.path.join(self.params.preprocessed_data_path, 'processed_graph.html'),
+            )
+
     def __len__(self):
         return len(self.encoded_data)
 
@@ -2174,43 +2233,8 @@ class DatasetChicago(Dataset):
 
 
 def get_datamodule(params):
-    # TSL-datasets style
-    if params.dataset_name in ['METR-LA', 'electricity', 'solar']:
-        if params.dataset_name == 'METR-LA':
-            dataset = MetrLA(root='../data')
-        elif params.dataset_name == 'electricity':
-            dataset = Elergone(root='../data')
-        else:
-            raise ValueError(f'Dataset {params.dataset_name} not recognized')
-
-        params.num_nodes = dataset.shape[1]
-        connectivity = dataset.get_connectivity(threshold=0.1,
-                                                include_self=True,
-                                                normalize_axis=1,
-                                                layout="edge_index")
-        df_dataset = dataset.dataframe()
-        # Initialize MinMaxScaler
-        scaler = MinMaxScaler()
-
-        # Apply the scaler to the DataFrame
-        df_dataset = pd.DataFrame(scaler.fit_transform(df_dataset), columns=df_dataset.columns)
-        torch_dataset = SpatioTemporalDataset(target=df_dataset,
-                                              connectivity=connectivity,  # edge_index
-                                              horizon=params.prediction_window,
-                                              window=params.lags,
-                                              stride=1)
-        # Normalize data using mean and std computed over time and node dimensions
-        splitter = TemporalSplitter(val_len=0.2,
-                                    test_len=0.1)
-        data_module_instance = SpatioTemporalDataModule(
-            dataset=torch_dataset,
-            # scalers=scalers,
-            splitter=splitter,
-            batch_size=params.batch_size,
-            workers=2
-        )
     # Dataset from scratch
-    elif params.dataset_name in ['denmark', 'newyork', 'chicago']:
+    if params.dataset_name in ['denmark', 'newyork', 'chicago']:
         data_module_instance = EVDataModule(params)
         params = data_module_instance.run_params
     else:
@@ -2225,6 +2249,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset_name", type=str, default='chicago',
                         help="['denmark', 'metr_la', 'newyork', 'chicago']")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size!")
+    parser.add_argument("--graph_distance_threshold", type=float, default=50, help="Cluster node thresh.")
     parser.add_argument("--model", type=str, default='GraphWavenet', help="Select model!")
     parser.add_argument("--verbose", "-v", action="store_false", help="Attiva output dettagliato")
     args = parser.parse_args()
@@ -2234,4 +2259,6 @@ if __name__ == '__main__':
 
     # Datamodule
     dm = EVDataModule(instance_parameters)
-    print('DM created!')
+    print('DM created!') # con 20 graph_distance_threshold dà errore
+
+

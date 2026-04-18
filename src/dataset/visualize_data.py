@@ -1,20 +1,277 @@
+import ast
 import json
 import math
 import numpy as np
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import Optional
 import pandas as pd
 import folium
 import random
 import re
+import torch
 from typing import List, Tuple
 from folium.features import DivIcon
+from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
 import csv
 import os
 
 
+def plot_nodes(tensor: torch.Tensor, feature: int, figsize: tuple = (15, 10)):
+    """
+    tensor shape: (Nodes, Timesteps, Features)
+    Plots all nodes over time for a given feature.
+
+    Args:
+        tensor:  input tensor (Nodes, Timesteps, Features)
+        feature: feature index to plot
+        figsize: figure size (width, height)
+    """
+    data = tensor[:, :, feature].cpu().numpy()  # (Nodes, Timesteps)
+    n_nodes = data.shape[0]
+
+    plt.figure(figsize=figsize)
+    for node in range(n_nodes):
+        plt.plot(data[node], label=f'Node {node}', alpha=0.7)
+
+    plt.title(f'All nodes over time — Feature {feature}')
+    plt.xlabel('Timestep')
+    plt.ylabel('Value')
+    plt.legend(loc='upper right', ncol=max(1, n_nodes // 10), fontsize='small')
+    plt.tight_layout()
+    plt.show()
+
+
+def visualize_processed_graph(
+        edges_df: pd.DataFrame,
+        added_edges_df: pd.DataFrame,
+        nodes_df: pd.DataFrame,
+        highlight_added: bool = True,
+        file_html: str = "processed_graph.html",
+        zoom_start: int = 12,
+        usa_satellite: bool = True,
+        mostra_nodi: bool = True,
+        mostra_popup_id: bool = True,
+        show_matplotlib: bool = True,
+        weight_normal: int = 5,
+        weight_added: int = 2,
+        opacity: float = 0.5,
+        color_normal: str = "#1f77b4",
+        color_added: str = "#b53f24",
+        color_nodes: str = "#2ca02c",
+        random_edge_colors: bool = True,
+) -> Optional[folium.Map]:
+    """
+    Visualizza il grafo processato (edges_df + added_edges_df + nodes_df):
+    - Produce un file HTML interattivo con folium (stile coerente con le altre funzioni del modulo).
+    - Produce un plot statico con matplotlib (stile coerente con build_graph.py).
+
+    Parametri
+    ---------
+    edges_df        : DataFrame completo degli archi (inclusi gli aggiunti),
+                      colonne [id, src, tgt, distance, src_id, tgt_id].
+                      src/tgt possono essere tuple (lat, lon) o stringhe rappresentazione tuple.
+    added_edges_df  : DataFrame dei soli archi aggiunti per connettività (stesso schema di edges_df).
+    nodes_df        : DataFrame dei nodi, colonne [node_id, lat, lon].
+    highlight_added : se True, gli archi in added_edges_df vengono disegnati con colore diverso
+                      (color_added) e stile tratteggiato; se False tutti gli archi usano color_normal.
+    file_html       : percorso del file HTML di output.
+    zoom_start      : livello di zoom iniziale della mappa folium.
+    usa_satellite   : se True usa sfondo Esri World Imagery, altrimenti OpenStreetMap.
+    mostra_nodi     : se True aggiunge CircleMarker per ogni nodo sulla mappa e scatter su matplotlib.
+    mostra_popup_id : se True aggiunge popup con id arco/nodo sulla mappa folium.
+    show_matplotlib : se True mostra anche il plot matplotlib (plt.show()).
+    weight_normal   : spessore linee archi originali (folium).
+    weight_added    : spessore linee archi aggiunti (folium).
+    opacity         : opacità linee (folium).
+    color_normal      : colore esadecimale archi originali (usato solo se random_edge_colors=False).
+    color_added       : colore esadecimale archi aggiunti.
+    color_nodes       : colore esadecimale nodi.
+    random_edge_colors: se True, ogni arco originale viene disegnato con un colore random;
+                        se False, tutti gli archi originali usano color_normal.
+
+    Ritorna
+    -------
+    folium.Map  : oggetto mappa HTML (None se edges_df è vuoto).
+    """
+
+    def _parse_coord(val):
+        """Converte una tupla (lat, lon) o la sua rappresentazione stringa in (float, float)."""
+        if isinstance(val, (tuple, list)):
+            return float(val[0]), float(val[1])
+        if isinstance(val, str):
+            parsed = ast.literal_eval(val)
+            return float(parsed[0]), float(parsed[1])
+        raise TypeError(f"Impossibile parsare la coordinata: {val!r}")
+
+    # --- Normalizza le colonne src/tgt ------------------------------------------
+    edges_df = edges_df.copy()
+    edges_df["src"] = edges_df["src"].apply(_parse_coord)
+    edges_df["tgt"] = edges_df["tgt"].apply(_parse_coord)
+
+    added_ids: set = set()
+    if added_edges_df is not None and not added_edges_df.empty:
+        added_edges_df = added_edges_df.copy()
+        added_edges_df["src"] = added_edges_df["src"].apply(_parse_coord)
+        added_edges_df["tgt"] = added_edges_df["tgt"].apply(_parse_coord)
+        added_ids = set(added_edges_df["id"].tolist())
+
+    # --- Separa archi originali e aggiunti -------------------------------------
+    if highlight_added and added_ids:
+        orig_edges = edges_df[~edges_df["id"].isin(added_ids)]
+        add_edges = edges_df[edges_df["id"].isin(added_ids)]
+    else:
+        orig_edges = edges_df
+        add_edges = pd.DataFrame()
+
+    if edges_df.empty:
+        print("[visualize_processed_graph] edges_df è vuoto, nulla da visualizzare.")
+        return None
+
+    # --- Centro della mappa ----------------------------------------------------
+    all_lats = [c[0] for c in edges_df["src"]] + [c[0] for c in edges_df["tgt"]]
+    all_lons = [c[1] for c in edges_df["src"]] + [c[1] for c in edges_df["tgt"]]
+    center_lat = sum(all_lats) / len(all_lats)
+    center_lon = sum(all_lons) / len(all_lons)
+
+    # =========================================================================
+    # FOLIUM MAP
+    # =========================================================================
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=zoom_start, tiles=None)
+
+    if usa_satellite:
+        folium.TileLayer(
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/"
+                  "World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            attr="Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, "
+                 "Getmapping, Aerogrid, IGN, IGP, UPR-EGP, GIS User Community",
+            name="Esri World Imagery",
+            overlay=False,
+            control=True,
+        ).add_to(m)
+    else:
+        folium.TileLayer("OpenStreetMap", name="OpenStreetMap").add_to(m)
+
+    # --- Gruppo archi originali ------------------------------------------------
+    grp_orig = folium.FeatureGroup(name=f"Archi originali ({len(orig_edges)})").add_to(m)
+    for _, row in orig_edges.iterrows():
+        src_lat, src_lon = row["src"]
+        tgt_lat, tgt_lon = row["tgt"]
+        popup_txt = f"edge id: {row['id']}" if mostra_popup_id else None
+        edge_color = "#{:06x}".format(random.randint(0, 0xFFFFFF)) if random_edge_colors else color_normal
+        folium.PolyLine(
+            locations=[[src_lat, src_lon], [tgt_lat, tgt_lon]],
+            color=edge_color,
+            weight=weight_normal,
+            opacity=opacity,
+            popup=popup_txt,
+        ).add_to(grp_orig)
+
+    # --- Gruppo archi aggiunti -------------------------------------------------
+    if not add_edges.empty:
+        grp_added = folium.FeatureGroup(
+            name=f"Archi aggiunti per connettività ({len(add_edges)})"
+        ).add_to(m)
+        for _, row in add_edges.iterrows():
+            src_lat, src_lon = row["src"]
+            tgt_lat, tgt_lon = row["tgt"]
+            popup_txt = f"added edge id: {row['id']}" if mostra_popup_id else None
+            folium.PolyLine(
+                locations=[[src_lat, src_lon], [tgt_lat, tgt_lon]],
+                color=color_added,
+                weight=weight_added,
+                opacity=opacity,
+                popup=popup_txt,
+                dash_array="6 4",
+            ).add_to(grp_added)
+
+    # --- Gruppo nodi ----------------------------------------------------------
+    if mostra_nodi and nodes_df is not None and not nodes_df.empty:
+        grp_nodes = folium.FeatureGroup(name=f"Nodi ({len(nodes_df)})").add_to(m)
+        for _, row in nodes_df.iterrows():
+            lat, lon = float(row["lat"]), float(row["lon"])
+            popup_txt = f"node id: {row['node_id']}" if mostra_popup_id else None
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=4,
+                color=color_nodes,
+                fill=True,
+                fill_color=color_nodes,
+                fill_opacity=0.85,
+                popup=popup_txt,
+            ).add_to(grp_nodes)
+
+    folium.LayerControl().add_to(m)
+    out_path = Path(file_html)
+    m.save(out_path)
+    print(f"[visualize_processed_graph] Mappa HTML salvata in '{out_path}'")
+
+    # =========================================================================
+    # MATPLOTLIB PLOT
+    # =========================================================================
+    if show_matplotlib:
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        # Archi originali
+        for _, row in orig_edges.iterrows():
+            src_lat, src_lon = row["src"]
+            tgt_lat, tgt_lon = row["tgt"]
+            ax.plot(
+                [src_lon, tgt_lon], [src_lat, tgt_lat],
+                color=color_normal, linewidth=1.0, alpha=0.7,
+            )
+
+        # Archi aggiunti
+        for i, (_, row) in enumerate(add_edges.iterrows()):
+            src_lat, src_lon = row["src"]
+            tgt_lat, tgt_lon = row["tgt"]
+            ax.plot(
+                [src_lon, tgt_lon], [src_lat, tgt_lat],
+                color=color_added, linewidth=1.5, alpha=0.85,
+                linestyle="--",
+                label="Archi aggiunti" if i == 0 else None,
+            )
+
+        # Nodi
+        if mostra_nodi and nodes_df is not None and not nodes_df.empty:
+            ax.scatter(
+                nodes_df["lon"].tolist(), nodes_df["lat"].tolist(),
+                c=color_nodes, s=25, zorder=5,
+                edgecolors="black", linewidths=0.4,
+            )
+
+        # Legenda manuale
+        legend_handles = [
+            Line2D([0], [0], color=color_normal, linewidth=1.5,
+                   label=f"Archi originali ({len(orig_edges)})"),
+        ]
+        if not add_edges.empty:
+            legend_handles.append(
+                Line2D([0], [0], color=color_added, linewidth=1.5, linestyle="--",
+                       label=f"Archi aggiunti ({len(add_edges)})")
+            )
+        if mostra_nodi and nodes_df is not None and not nodes_df.empty:
+            legend_handles.append(
+                Line2D([0], [0], marker="o", color="w",
+                       markerfacecolor=color_nodes, markersize=7,
+                       markeredgecolor="black", markeredgewidth=0.4,
+                       label=f"Nodi ({len(nodes_df)})")
+            )
+
+        ax.legend(handles=legend_handles, loc="best", fontsize=9)
+        ax.set_xlabel("Longitudine")
+        ax.set_ylabel("Latitudine")
+        ax.set_title("Grafo processato — archi originali e aggiunti")
+        ax.grid(True, linestyle="--", alpha=0.4)
+        plt.tight_layout()
+        plt.show()
+
+    return m
+
+
 def mappa_osservazioni_csv_denmark(
         percorso_csv: str,
+        save_csv=False,
         file_html: str = "mappa_osservazioni.html",
         ev_file:str ='../../data/ev/denmark/DenamarkEVstations.json',
         zoom_start: int = 12,
@@ -226,6 +483,7 @@ def _colore_random(rng: random.Random) -> str:
 
 def mappa_osservazioni_csv_newyork(
         percorso_csv: str,
+        save_csv: bool = False,
         file_html: str = "grafo_stradale.html",
         zoom_start: int = 12,
         usa_satellite: bool = True,
@@ -309,7 +567,8 @@ def mappa_osservazioni_csv_newyork(
     df['__distances'] = df['__distances'].apply(lambda x: np.array(x))
     df['__distances'] = df['__distances'].apply(lambda x: json.dumps(x.tolist()))
     # df_valid.to_csv('filter_newyork_map.csv', index=False, sep='|')
-    df.to_csv('output.csv', sep=';', quoting=csv.QUOTE_NONNUMERIC, index=False)
+    if save_csv:
+        df.to_csv('output.csv', sep=';', quoting=csv.QUOTE_NONNUMERIC, index=False)
 
     # centro della mappa
     all_pts = [pt for pts in df_valid["__points"] for pt in pts]
@@ -391,6 +650,7 @@ def mappa_osservazioni_csv_newyork(
 
 def mappa_osservazioni_csv_chicago(
         traffic_file: str,
+        save_csv=False,
         file_html: str = "grafo_stradale.html",
         zoom_start: int = 12,
         usa_satellite: bool = True,
@@ -560,40 +820,43 @@ def mappa_osservazioni_csv_chicago(
 
 if __name__ == '__main__':
     # Choose one in ['denmark', 'newyork', 'chicago']
-    datapath = '/mnt/c/Users/Grid/Desktop/PhD/EV/code/EV_GNN_repo/EV_GNN/data'
-    dataset = 'newyork'
+    datapath = '../../data'
+    dataset = 'chicago'
     if dataset == 'denmark':
         mappa_osservazioni_csv_denmark(
-            os.path.join(datapath,"denmark/traffic/observation_traffic_metadata.csv"),
-            file_html=os.path.join(datapath,"denmark/other/observation.html"),
+            os.path.join(datapath,"denmark","traffic","observation_traffic_metadata.csv"),
+            save_csv=False,
+            file_html=os.path.join(datapath,"denmark","other","observation.html"),
             zoom_start=9,
             usa_satellite=True,
             disegna_linea=True,
-            ev_file=os.path.join(datapath,"denmark/ev/other/DenamarkEVstations.json"))
+            ev_file=os.path.join(datapath,"denmark","ev","other","DenamarkEVstations.json"))
     elif dataset == 'newyork':
         mappa_osservazioni_csv_newyork(
-            percorso_csv=os.path.join(datapath,"newyork/traffic/stations_meta_data.csv"),
-            file_html=os.path.join(datapath,"newyork/other/map_v3.html"),
+            percorso_csv=os.path.join(datapath,"newyork", "traffic","stations_meta_data.csv"),
+            save_csv=False,
+            file_html=os.path.join(datapath,"newyork", "other", "map_v3.html"),
             zoom_start=12,
             usa_satellite=True,
             mostra_nodi=True,
             mostra_label=True,
             mostra_popup_id=True,
             show_ev=True,
-            ev_file=os.path.join(datapath,"newyork/ev/location_meta_data.csv"),
+            ev_file=os.path.join(datapath,"newyork","ev","location_meta_data.csv"),
             seed_colori=123
         )
     elif dataset == 'chicago':
         mappa_osservazioni_csv_chicago(
-            traffic_file=os.path.join(datapath,"chicago/traffic/location_summary.csv"),
-            file_html=os.path.join(datapath,"chicago/other/map_chicago.html"),
+            traffic_file=os.path.join(datapath,"chicago","traffic","location_summary.csv"),
+            save_csv=False,
+            file_html=os.path.join(datapath,"chicago","other","map_chicago.html"),
             zoom_start=12,
             usa_satellite=True,
             mostra_nodi=True,
             mostra_label=True,
             mostra_popup_id=True,
             show_ev=True,
-            ev_file=os.path.join(datapath,"chicago/ev/ev_locations_metadata.csv"),
+            ev_file=os.path.join(datapath,"chicago","ev","ev_location_metadata.csv"),
             seed_colori=123
         )
     else:
