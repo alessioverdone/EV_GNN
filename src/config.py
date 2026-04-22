@@ -48,7 +48,7 @@ class Parameters:
     enable_progress_bar = True
     check_val_every_n_epoch = 2
     node_features = 24
-    limit_train_batches = 10
+    limit_train_batches = 1.0
 
     # Data params
     num_nodes = 0
@@ -56,7 +56,7 @@ class Parameters:
     num_of_ev_nodes_limit = -1
     traffic_features = 0
     ev_features = 0
-    graph_distance_threshold = 10
+    graph_distance_threshold = 100
 
     # Model parameters
     emb_dim = 32

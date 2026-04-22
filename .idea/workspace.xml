@@ -5,30 +5,37 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8ca14d02-cf51-4b65-afa9-e0f57bfa273e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/EV_GNN.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/EV_GNN.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/aws.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/README final_merged_data upload PROBLEM" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/README final_merged_data upload PROBLEM" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/added_edges_df.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/added_edges_df.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/dataset_config.pt" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/dataset_config.pt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/edge_index_traffic.pt" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/edge_index_traffic.pt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/edge_weights_traffic.pt" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/edge_weights_traffic.pt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/edges_df.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/edges_df.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/final_temporal_merged_data.zip" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/final_temporal_merged_data.zip" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/map_ev_node_traffic_node.pt" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/map_ev_node_traffic_node.pt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/map_real_ev_node_traffic_node.pt" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/map_real_ev_node_traffic_node.pt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/merged_traffic_nodes_map.pt" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/merged_traffic_nodes_map.pt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/nodes_df.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/nodes_df.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/processed_graph.html" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/processed_graph.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/processed/chicago/time_column.pt" beforeDir="false" afterPath="$PROJECT_DIR$/data/processed/chicago_wrong/time_column.pt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/csv_out/newyork.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dataset/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dataset/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset/dataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/DCRNN.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/dcrnn.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/GCN1D.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/gcn1d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/GConvRNN.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/gconvrnn.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/miniRNN.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/mini_rnn.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/tf_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/tf_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/run_inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/run_inference.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/run_train.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/run_train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/scripts/run_grid_search.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/scripts/run_grid_search.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="129" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -43,6 +50,10 @@
     <setting file="file://$PROJECT_DIR$/src/run_inference.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/run_train.py" root0="FORCE_HIGHLIGHTING" />
   </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 4
 }</component>
@@ -54,13 +65,27 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.build_graph.executor": "Run",
     "Python.clean_timestamp.executor": "Run",
+    "Python.data_analysis.executor": "Run",
+    "Python.dataset.executor": "Run",
+    "Python.eda.executor": "Debug",
+    "Python.run_grid_search.executor": "Debug",
     "Python.run_inference.executor": "Run",
     "Python.run_train.executor": "Run",
+    "Python.tmp.executor": "Run",
+    "Python.utils.executor": "Run",
+    "Python.visualize_data.executor": "Run",
+    "RunOnceActivity.MCP Project settings loaded": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "ai.playground.ignore.import.keys.banner.in.settings": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
     "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "/home/user/Scrivania/PhD/EV/code/EV_GNN_repo_2b/EV_GNN",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -74,14 +99,23 @@
     <option name="SHOW_DIALOG" value="false" />
   </component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/registry/checkpoints/ckpt_chicago" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\User\Desktop\PhD\EV\code\EV_GNN_repo\EV_GNN\tmp_to_delete_afer_check" />
+      <recent name="$PROJECT_DIR$/src/dataset" />
+      <recent name="$PROJECT_DIR$/registry/inference_outputs/chicago" />
+      <recent name="$PROJECT_DIR$/src/scripts" />
+      <recent name="$PROJECT_DIR$/data" />
+      <recent name="$PROJECT_DIR$/src/utils" />
     </key>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-164cda30dcd9-0af03a5fa574-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.26830.99" />
+        <option value="bundled-js-predefined-d6986cc7102b-3bd3a6803838-JavaScript-PY-261.22158.340" />
+        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
       </set>
     </attachedChunks>
   </component>
@@ -99,6 +133,23 @@
       <workItem from="1764183744598" duration="1201000" />
       <workItem from="1764233246432" duration="10771000" />
       <workItem from="1764257320471" duration="1240000" />
+      <workItem from="1772634817818" duration="6440000" />
+      <workItem from="1772782614908" duration="24659000" />
+      <workItem from="1772881901390" duration="7004000" />
+      <workItem from="1773054929312" duration="10505000" />
+      <workItem from="1774431718764" duration="10482000" />
+      <workItem from="1774515132534" duration="16395000" />
+      <workItem from="1775574477251" duration="7719000" />
+      <workItem from="1775655890052" duration="2862000" />
+      <workItem from="1775659848790" duration="21000" />
+      <workItem from="1775660236929" duration="3055000" />
+      <workItem from="1775665994740" duration="9000" />
+      <workItem from="1776090776423" duration="2219000" />
+      <workItem from="1776093251253" duration="3366000" />
+      <workItem from="1776416518587" duration="11076000" />
+      <workItem from="1776506576118" duration="7474000" />
+      <workItem from="1776770538083" duration="3571000" />
+      <workItem from="1776852927058" duration="2314000" />
     </task>
     <servers />
   </component>
@@ -108,22 +159,175 @@
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
-          <line>1148</line>
+          <line>1160</line>
           <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1205</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/build_graph.py</url>
+          <line>20</line>
+          <option name="timeStamp" value="15" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/visualize_data.py</url>
+          <line>107</line>
+          <option name="timeStamp" value="17" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1321</line>
+          <option name="timeStamp" value="20" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1924</line>
+          <option name="timeStamp" value="36" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1939</line>
+          <option name="timeStamp" value="37" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2151</line>
+          <option name="timeStamp" value="38" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/eda.py</url>
+          <line>26</line>
+          <option name="timeStamp" value="49" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1278</line>
+          <option name="timeStamp" value="50" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/utils/inference_utils.py</url>
+          <line>383</line>
+          <option name="timeStamp" value="53" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2178</line>
+          <option name="timeStamp" value="54" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1935</line>
+          <option name="timeStamp" value="56" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1453</line>
+          <option name="timeStamp" value="60" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1460</line>
+          <option name="timeStamp" value="61" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>1463</line>
+          <option name="timeStamp" value="62" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2161</line>
+          <option name="timeStamp" value="64" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2108</line>
+          <option name="timeStamp" value="66" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2123</line>
+          <option name="timeStamp" value="67" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2139</line>
+          <option name="timeStamp" value="68" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2164</line>
+          <option name="timeStamp" value="69" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2174</line>
+          <option name="timeStamp" value="70" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>387</line>
+          <option name="timeStamp" value="71" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
+          <line>2066</line>
+          <option name="timeStamp" value="73" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/scripts/run_grid_search.py</url>
+          <line>114</line>
+          <option name="timeStamp" value="74" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/utils/utils.py</url>
+          <line>176</line>
+          <option name="timeStamp" value="75" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/scripts/run_grid_search.py</url>
+          <line>45</line>
+          <option name="timeStamp" value="76" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/scripts/run_grid_search.py</url>
+          <line>27</line>
+          <option name="timeStamp" value="77" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/dataset/data_analysis.py</url>
+          <line>29</line>
+          <option name="timeStamp" value="78" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/config.py</url>
+          <line>110</line>
+          <option name="timeStamp" value="80" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/dataset/dataset.py</url>
-          <line>1193</line>
-          <option name="timeStamp" value="4" />
+          <line>1413</line>
+          <option name="timeStamp" value="84" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/EV_GNN$run_train.coverage" NAME="run_train Coverage Results" MODIFIED="1764251286412" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
-    <SUITE FILE_PATH="coverage/EV_GNN$run_inference.coverage" NAME="run_inference Coverage Results" MODIFIED="1764247752499" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
     <SUITE FILE_PATH="coverage/EV_GNN$clean_timestamp.coverage" NAME="clean_timestamp Coverage Results" MODIFIED="1764173400380" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/EV_GNN$tmp.coverage" NAME="tmp Coverage Results" MODIFIED="1776507219713" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/EV_GNN$run_grid_search.coverage" NAME="run_grid_search Coverage Results" MODIFIED="1776853415057" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/scripts" />
+    <SUITE FILE_PATH="coverage/EV_GNN$dataset.coverage" NAME="dataset Coverage Results" MODIFIED="1774549539138" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/dataset" />
+    <SUITE FILE_PATH="coverage/EV_GNN$run_inference.coverage" NAME="run_inference Coverage Results" MODIFIED="1776513125670" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/scripts" />
+    <SUITE FILE_PATH="coverage/EV_GNN$visualize_data.coverage" NAME="visualize_data Coverage Results" MODIFIED="1772790129253" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/dataset" />
+    <SUITE FILE_PATH="coverage/EV_GNN$eda.coverage" NAME="eda Coverage Results" MODIFIED="1774443556595" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/dataset" />
+    <SUITE FILE_PATH="coverage/EV_GNN$build_graph.coverage" NAME="build_graph Coverage Results" MODIFIED="1774440095310" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/dataset" />
+    <SUITE FILE_PATH="coverage/EV_GNN$run_train.coverage" NAME="run_train Coverage Results" MODIFIED="1776855061333" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/scripts" />
+    <SUITE FILE_PATH="coverage/EV_GNN$data_analysis.coverage" NAME="data_analysis Coverage Results" MODIFIED="1776513213006" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/dataset" />
+    <SUITE FILE_PATH="coverage/EV_GNN$utils.coverage" NAME="utils Coverage Results" MODIFIED="1772790701782" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/dataset" />
   </component>
 </project>

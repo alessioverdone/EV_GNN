@@ -7,7 +7,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 from src.config import Parameters
 from src.dataset.dataset import get_datamodule
 from src.utils.utils import get_model, build_combinations, initialize_log_parameters, setup_seed, update_seed_metrics, \
-    update_run_metrics
+    update_run_metrics, DictNamespace
 
 
 def run_single_seed(combo: dict,
@@ -99,7 +99,7 @@ def run_single_combination(combo: dict,
 
 def main():
     search_space = {
-        'dataset_name': ['newyork', 'chicago'],
+        'dataset_name': ['chicago'],
         'emb_dim':[64,32],
         'dropout':[0.2,0.0],
         'batch_size': [16, 32],
