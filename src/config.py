@@ -62,22 +62,24 @@ class Parameters:
     emb_dim = 32
     dropout = 0.0
     num_layers=2
+    dcrnn_kernel_size = 2
+    dcrnn_n_layers = 2
 
     # Execution flags
     logging = False
-    save_ckpts = True
+    save_ckpts = False
     save_logs = True
     reproducible = True
     verbose = False
-    early_stopping = False
+    early_stopping = True
 
     # Inference parameters
     checkpoint = r''
     output_path = r''
-    show = True
+    show = False
     num_samples_to_show = 1
-    export_csv = True
-    visualize_data = True
+    export_csv = False
+    visualize_data = False
 
     def __init__(self, params=None):
         # Show parser args

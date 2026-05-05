@@ -24,13 +24,13 @@ parser.add_argument("--batch_size",
 # Model
 parser.add_argument("--model",
                     type=str,
-                    default='GraphWavenet',
+                    default='miniGRU',
                     help="Select model!")
 
 # Id run
 parser.add_argument("--id_run",
                     type=str,
-                    default='005',
+                    default='tmp',
                     help="Select id run!")
 
 # Verbose

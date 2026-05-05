@@ -100,10 +100,10 @@ def run_single_combination(combo: dict,
 def main():
     search_space = {
         'dataset_name': ['chicago'],
-        'emb_dim':[64,32],
-        'dropout':[0.2,0.0],
-        'batch_size': [16, 32],
-        'model': ['GraphWavenet']}
+        'emb_dim':[32],
+        'dropout':[0.2],
+        'batch_size': [64],
+        'model': ['GraphWavenet', 'AGCRNModel', 'miniLSTM', 'miniGRU', 'DCRNN']}
 
     global_config = {
         'id_run': '004',

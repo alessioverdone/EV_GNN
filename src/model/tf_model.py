@@ -7,7 +7,7 @@ from torch.nn import functional as F
 import torch
 from tsl.nn.models import DCRNNModel, GraphWaveNetModel, AGCRNModel
 from lightning.pytorch import LightningModule
-
+from torch_geometric.utils import from_networkx, to_dense_adj
 from src.model.gcn1d import GCN1DConv_big, GCN1DConv
 from src.model.gconvrnn import GraphConvRNN_our
 from src.model.mini_rnn import MultiLayerLSTMParallel, MultiLayerGRUParallel
@@ -44,14 +44,23 @@ class TF_model(LightningModule):
         elif  params.model == 'gConvGRU':
             self.g_conv_gru = GraphConvRNN_our(1, params.prediction_window, hidden_channels, params, cell_type='GRU')
         # DCRNN
+        # elif params.model == 'DCRNN':
+        #     self.dcrnn = DCRNNModel(input_size=1,
+        #                         output_size=1,
+        #                         horizon=params.prediction_window,
+        #                         hidden_size=hidden_channels,
+        #                         kernel_size=2,
+        #                         n_layers=2,
+        #                         dropout=0.0,
+        #                         activation='relu')
         elif params.model == 'DCRNN':
-            self.dcrnn = DCRNNModel(input_size=1,
-                                output_size=1,
+            self.dcrnn = DCRNNModel(input_size=self.params.traffic_features+self.params.ev_features,
+                                output_size=self.params.traffic_features+self.params.ev_features,
                                 horizon=params.prediction_window,
                                 hidden_size=hidden_channels,
-                                kernel_size=2,
-                                n_layers=2,
-                                dropout=0.0,
+                                kernel_size=params.dcrnn_kernel_size,
+                                n_layers=params.dcrnn_n_layers,
+                                dropout=params.dropout,
                                 activation='relu')
         # GraphWavenet
         elif params.model == 'GraphWavenet':
@@ -60,11 +69,18 @@ class TF_model(LightningModule):
                                                     horizon=params.prediction_window,
                                                     hidden_size=hidden_channels,
                                                     n_nodes=params.num_nodes,
-                                                    dropout=0.3)
+                                                    dropout=params.dropout)
         # AGCRN
+        # elif params.model == 'AGCRNModel':
+        #     self.agcrn = AGCRNModel(input_size=1,
+        #                             output_size=1,
+        #                             horizon=params.prediction_window,
+        #                             hidden_size=hidden_channels,
+        #                             exog_size=0,
+        #                             n_nodes=params.num_nodes)
         elif params.model == 'AGCRNModel':
-            self.agcrn = AGCRNModel(input_size=1,
-                                    output_size=1,
+            self.agcrn = AGCRNModel(input_size=self.params.traffic_features+self.params.ev_features,
+                                    output_size=self.params.traffic_features+self.params.ev_features,
                                     horizon=params.prediction_window,
                                     hidden_size=hidden_channels,
                                     exog_size=0,
@@ -72,16 +88,18 @@ class TF_model(LightningModule):
 
         # miniLSTM
         elif params.model == 'miniLSTM':
-            self.miniLSTM = MultiLayerLSTMParallel(input_size=1,
+            self.miniLSTM = MultiLayerLSTMParallel(input_size=self.params.traffic_features+self.params.ev_features,
                                                    hidden_size=hidden_channels,
-                                                   output_size=params.prediction_window,
+                                                   output_size=self.params.traffic_features+self.params.ev_features,
+                                                   horizon=params.prediction_window,
                                                    num_layers=params.num_layers,
                                                    seq_len=params.lags)
         # miniGRU
         elif params.model == 'miniGRU':
-            self.miniGRU = MultiLayerGRUParallel(input_size=1,
+            self.miniGRU = MultiLayerGRUParallel(input_size=self.params.traffic_features+self.params.ev_features,
                                                    hidden_size=hidden_channels,
-                                                   output_size=params.prediction_window,
+                                                   output_size=self.params.traffic_features+self.params.ev_features,
+                                                   horizon=params.prediction_window,
                                                    num_layers=params.num_layers,
                                                    seq_len=params.lags)
 
@@ -131,8 +149,13 @@ class TF_model(LightningModule):
         elif self.params.model == 'DCRNN':
             # torch-spatiotemporal library data format
             if x.shape != 4:
-                x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size, self.params.lags, self.params.num_nodes, 1))
-                edge_index = edge_index[:, :int(edge_index.shape[1]/self.params.batch_size)]
+                # x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size, self.params.lags, self.params.num_nodes, 1))
+                # edge_index = edge_index[:, :int(edge_index.shape[1]/self.params.batch_size)]
+                x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                    self.params.lags,
+                                                    self.params.num_nodes,
+                                                    self.params.traffic_features+self.params.ev_features))  # newyork era 7
+                edge_index = edge_index[:, :int(edge_index.shape[1] / self.params.batch_size)]
             x = self.dcrnn(x, edge_index)
             x = rearrange(x, 'b t n f ->  (b n) (t f) ')
 
@@ -152,15 +175,29 @@ class TF_model(LightningModule):
         elif self.params.model == 'AGCRNModel':
             # torch-spatiotemporal library data format
             if x.shape != 4:
-                x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size, self.params.lags, self.params.num_nodes, 1))
-                edge_index = edge_index[:, :int(edge_index.shape[1]/self.params.batch_size)]
+                # x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size, self.params.lags, self.params.num_nodes, 1))
+                # edge_index = edge_index[:, :int(edge_index.shape[1]/self.params.batch_size)]
+                x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                    self.params.lags,
+                                                    self.params.num_nodes,
+                                                    self.params.traffic_features+self.params.ev_features))  # newyork era 7
             x = self.agcrn(x)
             x = rearrange(x, 'b t n f ->  (b n) (t f) ')
 
         elif self.params.model == 'miniLSTM':
+            x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                self.params.lags,
+                                                self.params.num_nodes,
+                                                self.params.traffic_features + self.params.ev_features))  # newyork era 7
+            x = rearrange(x, 'b t n f ->  (b n) t f ')
             x = self.miniLSTM(x)
 
         elif self.params.model == 'miniGRU':
+            x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                self.params.lags,
+                                                self.params.num_nodes,
+                                                self.params.traffic_features + self.params.ev_features))  # newyork era 7
+            x = rearrange(x, 'b t n f ->  (b n) t f ')
             x = self.miniGRU(x)
         return x
 

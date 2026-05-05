@@ -44,22 +44,23 @@ class MiniLSTMParallelCell(nn.Module):
 
 # Modello LSTM con più strati utilizzando la MiniLSTMParallelCell
 class MultiLayerLSTMParallel(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers, seq_len):
+    def __init__(self, input_size, hidden_size, output_size, num_layers, seq_len, horizon):
         super(MultiLayerLSTMParallel, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.num_layers = num_layers
+        self.horizon = horizon
 
         # Creazione di più strati LSTM
         self.layers = nn.ModuleList(
             [MiniLSTMParallelCell(input_size if i == 0 else hidden_size, hidden_size) for i in range(num_layers)]
         )
-        self.output_layer = nn.Linear(hidden_size*seq_len, output_size)
+        self.output_layer = nn.Linear(hidden_size*seq_len, output_size*self.horizon)
         nn.init.xavier_uniform_(self.output_layer.weight)
 
     def forward(self, x):
-        x = x.unsqueeze(-1)
+        # x = x.unsqueeze(-1)
         batch_size, seq_len, _ = x.size()
         h = [torch.zeros(batch_size, 1, self.hidden_size).to(x.device) for _ in range(self.num_layers)]
 
@@ -72,7 +73,7 @@ class MultiLayerLSTMParallel(nn.Module):
             x = h_1_n  # L'intera sequenza di hidden states viene passata al prossimo livello
         x = torch.reshape(x, (batch_size, -1))
         res = self.output_layer(x)
-        return res
+        return res# .reshape(batch_size, self.horizon, self.output_size)
 
 class MiniGRUParallelCell(nn.Module):
     def __init__(self, dim_in, dim_out):
@@ -93,22 +94,23 @@ class MiniGRUParallelCell(nn.Module):
         return h
 
 class MultiLayerGRUParallel(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers, seq_len):
+    def __init__(self, input_size, hidden_size, output_size, num_layers, seq_len, horizon):
         super(MultiLayerGRUParallel, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.num_layers = num_layers
+        self.horizon = horizon
 
         # Creazione di più strati LSTM
         self.layers = nn.ModuleList(
             [MiniGRUParallelCell(input_size if i == 0 else hidden_size, hidden_size) for i in range(num_layers)]
         )
-        self.output_layer = nn.Linear(hidden_size*seq_len, output_size)
+        self.output_layer = nn.Linear(hidden_size*seq_len, output_size*horizon)
         nn.init.xavier_uniform_(self.output_layer.weight)
 
     def forward(self, x):
-        x = x.unsqueeze(-1)
+        # x = x.unsqueeze(-1)
         batch_size, seq_len, _ = x.size()
         h = [torch.zeros(batch_size, 1, self.hidden_size).to(x.device) for _ in range(self.num_layers)]
 
