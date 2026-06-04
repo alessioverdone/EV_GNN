@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import torch
+import yaml
 
 
 class Parameters:
@@ -34,9 +35,9 @@ class Parameters:
     batch_size = 64
     train_ratio = 0.7
     val_test_ratio = 0.5
-    num_workers = 1
+    num_workers = 4
     early_stop_callback_flag = False
-    lr = 3e-4
+    lr = 1e-3
     test_eval = 10
     seed = 42
     id_run = '001'
@@ -44,9 +45,9 @@ class Parameters:
     # LT Trainer parameters
     accelerator = 'gpu'
     log_every_n_steps = 300
-    max_epochs = 5
+    max_epochs = 40
     enable_progress_bar = True
-    check_val_every_n_epoch = 2
+    check_val_every_n_epoch = 1
     node_features = 24
     limit_train_batches = 1.0
 
@@ -82,12 +83,6 @@ class Parameters:
     visualize_data = False
 
     def __init__(self, params=None):
-        # Show parser args
-        if params.verbose:
-            print("Parameters:")
-            for name, value in vars(params).items():
-                print(f"  {name}: {value}")
-
         # Copy all default class attributes as istance attribute
         for attr, value in type(self).__dict__.items():
             if not attr.startswith('__') and not callable(value):
@@ -95,6 +90,12 @@ class Parameters:
 
         # If a Namespace is passed, overwrite the values
         if params is not None:
+            # Show parser args
+            if params.verbose:
+                print("Parameters:")
+                for name, value in vars(params).items():
+                    print(f"  {name}: {value}")
+
             # If Namespace argparse, convert in dict
             items = (vars(params).items()
                      if not isinstance(params, dict)
@@ -142,6 +143,16 @@ class Parameters:
         with open(self.dirpath_save_config, 'w') as f:
             json.dump(data, f, indent=4)
         print(f"✅ Parametri salvati in {self.dirpath_save_config}")
+
+    def to_yaml(self, path: str):
+        with open(path, 'w') as f:
+            yaml.dump(vars(self), f, default_flow_style=False, sort_keys=False)
+
+
+    def update(self, combo: dict) -> 'Parameters':
+        for key, value in combo.items():
+            setattr(self, key, value)
+        return self
 
 
 

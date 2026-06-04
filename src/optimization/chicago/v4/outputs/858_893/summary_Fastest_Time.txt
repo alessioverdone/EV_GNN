@@ -1,10 +1,10 @@
 FASTEST TIME SUMMARY
 
 OVERALL:
- Total Distance: 55.29 km
- Travel Time: 64.4 minutes (1.07 hours)
+ Total Distance: 55.46 km
+ Travel Time: 65.4 minutes (1.09 hours)
  Charging Time: 42.7 minutes (0.71 hours)
- Total Time: 107.1 minutes
+ Total Time: 108.2 minutes
  Number of Charging Stops: 1
  Final Battery SOC: 74.0%
 

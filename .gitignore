@@ -174,3 +174,4 @@ registry/
 .idea/
 dataset/
 checkpoints/data/processed/chicago/final_temporal_merged_data.pt
+src/optimization/chicago/data/processor_cache.pkl

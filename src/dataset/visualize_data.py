@@ -847,16 +847,16 @@ if __name__ == '__main__':
         )
     elif dataset == 'chicago':
         mappa_osservazioni_csv_chicago(
-            traffic_file=os.path.join(datapath,"chicago","traffic","location_summary.csv"),
+            traffic_file=os.path.join(datapath, "raw", "chicago","traffic","location_summary.csv"),
             save_csv=False,
-            file_html=os.path.join(datapath,"chicago","other","map_chicago.html"),
+            file_html=os.path.join(datapath,"raw", "chicago","other","map_chicago.html"),
             zoom_start=12,
             usa_satellite=True,
             mostra_nodi=True,
             mostra_label=True,
             mostra_popup_id=True,
             show_ev=True,
-            ev_file=os.path.join(datapath,"chicago","ev","ev_location_metadata.csv"),
+            ev_file=os.path.join(datapath,"raw", "chicago","ev","ev_location_metadata.csv"),
             seed_colori=123
         )
     else:

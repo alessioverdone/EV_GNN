@@ -108,7 +108,7 @@ class TF_model(LightningModule):
         self.params = params
 
         # torch lightning specific
-        self.automatic_optimization = False
+        self.automatic_optimization = True
         self.debug = False
         self.params = params
         self.best_mse = 1000
@@ -227,13 +227,13 @@ class TF_model(LightningModule):
             'lr_scheduler': {
                 'scheduler': scheduler,
                 'monitor': 'val_mse',  # Metric to monitor for reducing learning rate
-                'frequency': 1,  # How often to call the scheduler (after every epoch in this case)
+                'frequency': 2,  # How often to call the scheduler (after every epoch in this case)
             }
         }
 
     def training_step(self, train_batch, batch_idx):
-        optimizer = self.optimizers(use_pl_optimizer=True)
-        optimizer.zero_grad()
+        # optimizer = self.optimizers(use_pl_optimizer=True)
+        # optimizer.zero_grad()
 
         # Get data from batches
         x, y, edge_index, edge_weight = (train_batch.x,
@@ -246,16 +246,17 @@ class TF_model(LightningModule):
 
         y_predicted = self.forward(train_batch)
         loss_forecasting = F.mse_loss(y_predicted, y)
-        loss_forecasting.backward()
+        # loss_forecasting.backward()
         train_mae = MAE(y_predicted.cpu().detach().numpy(), y.cpu().detach().numpy())
         train_rmse = root_mean_squared_error(y_predicted.cpu().detach().numpy(), y.cpu().detach().numpy())
         train_mape = mean_absolute_percentage_error(y_predicted.cpu().detach().numpy(), y.cpu().detach().numpy())
-        optimizer.step()
+        # optimizer.step()
 
         self.log('train_mse', loss_forecasting.detach(), batch_size=self.params.batch_size, prog_bar=True)
         self.log('train_rmse', train_rmse, batch_size=self.params.batch_size, prog_bar=True)
         self.log('train_mae', train_mae, batch_size=self.params.batch_size, prog_bar=True)
         self.log('train_mape', train_mape, batch_size=self.params.batch_size, prog_bar=True)
+        return loss_forecasting
 
     def validation_step(self, val_batch, batch_idx):
         # Get data from batches

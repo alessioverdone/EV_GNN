@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 import sys
@@ -55,6 +56,7 @@ def run_single_seed(combo: dict,
     # Trainer
     trainer = pl.Trainer(
         accelerator=run_params.accelerator,
+        accumulate_grad_batches=2,
         log_every_n_steps=run_params.log_every_n_steps,
         max_epochs=run_params.max_epochs,
         enable_progress_bar=run_params.enable_progress_bar,
@@ -99,14 +101,14 @@ def run_single_combination(combo: dict,
 
 def main():
     search_space = {
-        'dataset_name': ['chicago'],
-        'emb_dim':[32],
-        'dropout':[0.2],
-        'batch_size': [64],
-        'model': ['GraphWavenet', 'AGCRNModel', 'miniLSTM', 'miniGRU', 'DCRNN']}
+        'dataset_name': ['newyork'],
+        'emb_dim':[64],
+        'dropout':[0.0, 0.1],
+        'batch_size': [32],
+        'model': ['GraphWavenet']}
 
     global_config = {
-        'id_run': '004',
+        'id_run': '007',
         'save_ckpts': False,
         'early_stopping': True,
         'verbose': False,
@@ -117,6 +119,12 @@ def main():
     os.makedirs(global_config['logs_dir'], exist_ok=True)
     combinations = build_combinations(search_space)
     print(f'Total combinations: {len(combinations)}')
+
+    # Save serach params
+    static_run_params = Parameters().update(combinations[0] | global_config)
+    static_run_params.to_yaml(os.path.join(global_config['logs_dir'], 'static_run_params.yaml'))
+    with open(os.path.join(global_config['logs_dir'], 'search_space_params.json'), "w", encoding="utf-8") as f:
+        json.dump(search_space|global_config, f, indent=4, ensure_ascii=False)
 
     for cont, combo in enumerate(combinations):
         # try:
