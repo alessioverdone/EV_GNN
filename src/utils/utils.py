@@ -19,7 +19,7 @@ class DictNamespace:
 
 
 def get_model(run_params):
-    if run_params.model in ['gcn', 'gat', 'mlp', 'gcn1d', 'gcn1d-big', 'gConvLSTM', 'gConvGRU', 'DCRNN', 'GraphWavenet', 'AGCRNModel', 'miniLSTM', 'miniGRU']:
+    if run_params.model in ['LSTM', 'Transformer', 'Informer', 'Mamba','gcn', 'gat', 'mlp', 'gcn1d', 'gcn1d-big', 'gConvLSTM', 'gConvGRU', 'DCRNN', 'GraphWavenet', 'AGCRNModel', 'miniLSTM', 'miniGRU']:
         model = TF_model(run_params)
     else:
         raise Exception('Error in select the model!')

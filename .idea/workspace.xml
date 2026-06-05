@@ -5,23 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8ca14d02-cf51-4b65-afa9-e0f57bfa273e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/utils/create_latex_table.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/utils/parse_logs.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/raw/chicago/other/map_chicago.html" beforeDir="false" afterPath="$PROJECT_DIR$/data/raw/chicago/other/map_chicago.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dataset/visualize_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset/visualize_data.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/tf_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/tf_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/objectives_detail.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/objectives_detail.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/parallel_coordinates.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/parallel_coordinates.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/pareto_front.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/pareto_front.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/pareto_front_3d.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/pareto_front_3d.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/route_comparison.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/route_comparison.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/route_networkx.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/route_networkx.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/summary_Fastest_Time.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/summary_Fastest_Time.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/summary_Shortest_Distance.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/858_893/summary_Shortest_Distance.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/network.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/optimization/chicago/v4/outputs/network.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/scripts/run_grid_search.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/scripts/run_grid_search.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -168,7 +153,9 @@
       <workItem from="1780586150343" duration="94000" />
       <workItem from="1780586351638" duration="195000" />
       <workItem from="1780586560640" duration="625000" />
-      <workItem from="1780588975487" duration="398000" />
+      <workItem from="1780588975487" duration="2191000" />
+      <workItem from="1780656894892" duration="925000" />
+      <workItem from="1780661876257" duration="4346000" />
     </task>
     <servers />
   </component>

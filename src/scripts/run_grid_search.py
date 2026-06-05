@@ -103,9 +103,9 @@ def main():
     search_space = {
         'dataset_name': ['newyork'],
         'emb_dim':[64],
-        'dropout':[0.0, 0.1],
-        'batch_size': [32],
-        'model': ['GraphWavenet']}
+        'dropout':[0.0],
+        'batch_size': [16],
+        'model': ['Mamba']}
 
     global_config = {
         'id_run': '007',

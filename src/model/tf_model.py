@@ -11,6 +11,8 @@ from torch_geometric.utils import from_networkx, to_dense_adj
 from src.model.gcn1d import GCN1DConv_big, GCN1DConv
 from src.model.gconvrnn import GraphConvRNN_our
 from src.model.mini_rnn import MultiLayerLSTMParallel, MultiLayerGRUParallel
+from src.model.lstm_transformer import StandardLSTM, TemporalTransformer, InformerEncoder
+from src.model.mamba_minimal import MambaModel
 
 
 class TF_model(LightningModule):
@@ -103,6 +105,65 @@ class TF_model(LightningModule):
                                                    num_layers=params.num_layers,
                                                    seq_len=params.lags)
 
+        # Standard LSTM (vanilla backprop-through-time)
+        elif params.model == 'LSTM':
+            self.lstm_model = StandardLSTM(
+                input_size=self.params.traffic_features + self.params.ev_features,
+                hidden_size=hidden_channels,
+                output_size=self.params.traffic_features + self.params.ev_features,
+                num_layers=params.num_layers,
+                seq_len=params.lags,
+                horizon=params.prediction_window,
+                dropout=params.dropout,
+            )
+
+        # Temporal Transformer (PyTorch built-in encoder)
+        elif params.model == 'Transformer':
+            nhead = getattr(params, 'nhead', 4)
+            d_ff  = getattr(params, 'd_ff', 4 * hidden_channels)
+            self.transformer_model = TemporalTransformer(
+                input_size=self.params.traffic_features + self.params.ev_features,
+                d_model=hidden_channels,
+                nhead=nhead,
+                num_layers=params.num_layers,
+                d_ff=d_ff,
+                output_size=self.params.traffic_features + self.params.ev_features,
+                seq_len=params.lags,
+                horizon=params.prediction_window,
+                dropout=params.dropout,
+            )
+
+        # Informer — ProbSparse attention + distilling (Zhou et al. 2021)
+        elif params.model == 'Informer':
+            nhead  = getattr(params, 'nhead', 4)
+            d_ff   = getattr(params, 'd_ff', 4 * hidden_channels)
+            factor = getattr(params, 'informer_factor', 5)
+            self.informer_model = InformerEncoder(
+                input_size=self.params.traffic_features + self.params.ev_features,
+                d_model=hidden_channels,
+                n_heads=nhead,
+                num_layers=params.num_layers,
+                d_ff=d_ff,
+                output_size=self.params.traffic_features + self.params.ev_features,
+                seq_len=params.lags,
+                horizon=params.prediction_window,
+                dropout=params.dropout,
+                factor=factor,
+            )
+
+        # Mamba — selective SSM, pure PyTorch (Gu & Dao 2023)
+        elif params.model == 'Mamba':
+            self.mamba_model = MambaModel(
+                input_size=self.params.traffic_features + self.params.ev_features,
+                d_model=hidden_channels,
+                num_layers=params.num_layers,
+                output_size=self.params.traffic_features + self.params.ev_features,
+                seq_len=params.lags,
+                horizon=params.prediction_window,
+                d_state=getattr(params, 'mamba_d_state', 16),
+                d_conv=getattr(params, 'mamba_d_conv', 4),
+                expand=getattr(params, 'mamba_expand', 2),
+            )
 
         self.lin = Linear(hidden_channels, params.prediction_window)
         self.params = params
@@ -199,6 +260,39 @@ class TF_model(LightningModule):
                                                 self.params.traffic_features + self.params.ev_features))  # newyork era 7
             x = rearrange(x, 'b t n f ->  (b n) t f ')
             x = self.miniGRU(x)
+
+        elif self.params.model == 'LSTM':
+            x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                self.params.lags,
+                                                self.params.num_nodes,
+                                                self.params.traffic_features + self.params.ev_features))
+            x = rearrange(x, 'b t n f -> (b n) t f')
+            x = self.lstm_model(x)
+
+        elif self.params.model == 'Transformer':
+            x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                self.params.lags,
+                                                self.params.num_nodes,
+                                                self.params.traffic_features + self.params.ev_features))
+            x = rearrange(x, 'b t n f -> (b n) t f')
+            x = self.transformer_model(x)
+
+        elif self.params.model == 'Informer':
+            x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                self.params.lags,
+                                                self.params.num_nodes,
+                                                self.params.traffic_features + self.params.ev_features))
+            x = rearrange(x, 'b t n f -> (b n) t f')
+            x = self.informer_model(x)
+
+        elif self.params.model == 'Mamba':
+            x = torch.reshape(x.unsqueeze(-1), (self.params.batch_size,
+                                                self.params.lags,
+                                                self.params.num_nodes,
+                                                self.params.traffic_features + self.params.ev_features))
+            x = rearrange(x, 'b t n f -> (b n) t f')
+            x = self.mamba_model(x)
+
         return x
 
     def on_validation_epoch_end(self):
