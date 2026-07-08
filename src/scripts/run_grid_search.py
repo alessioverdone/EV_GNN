@@ -1,12 +1,11 @@
 import json
 import os
 from datetime import datetime
-import sys
 import lightning as pl
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 
 from src.config import Parameters
-from src.dataset.dataset import get_datamodule
+from src.dataset.datasets import get_datamodule
 from src.utils.utils import get_model, build_combinations, initialize_log_parameters, setup_seed, update_seed_metrics, \
     update_run_metrics, DictNamespace
 
@@ -103,9 +102,9 @@ def main():
     search_space = {
         'dataset_name': ['newyork'],
         'emb_dim':[64],
-        'dropout':[0.0],
+        'dropout':[0.0, 0.1],
         'batch_size': [16],
-        'model': ['Mamba']}
+        'model': ['LSTM', 'Transformer', 'Informer', 'Mamba']}
 
     global_config = {
         'id_run': '007',

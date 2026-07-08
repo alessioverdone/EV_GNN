@@ -3,7 +3,7 @@ import lightning as pl
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 
 from src.config import Parameters
-from src.dataset.dataset import get_datamodule
+from src.dataset.datasets import get_datamodule
 from src.utils.utils import get_model
 
 # Parser

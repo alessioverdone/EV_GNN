@@ -10,18 +10,20 @@ class Parameters:
     project_path = str(Path(__file__).resolve().parents[1])
 
     # Datasets and paths
+    with open(os.path.join(project_path, "registry", "configurations", "dataset_hyperparams.json"),
+              "r", encoding="utf-8") as file:
+        datasets_hyperparameters = json.load(file)
     save_preprocessed_data = False  # related to traffic_temporal_data_processed
     load_preprocessed_data = False  # related to traffic_temporal_data_processed
     use_traffic_metadata_processed = True
     use_traffic_temporal_data_processed = False
-    dataset_name = 'newyork'  # ['METR-LA', 'Electricity']
-    # project_path = '/home/user/Scrivania/PhD/EV/code/EV_GNN_repo_2b/EV_GNN'
+    dataset_name = 'losangeles'
 
-    # preprocessed_dataset_path = os.path.join(project_path, 'data', 'dev', dataset_name)
-    traffic_temporal_data_folder = os.path.join(project_path, 'data', dataset_name, 'traffic', 'traffic_data')
-    traffic_metadata_file = os.path.join(project_path, 'data', dataset_name, 'traffic', 'processed_newyork_traffic_graph.csv')
-    ev_temporal_data_folder =os.path.join(project_path, 'data', dataset_name, 'ev', 'stations_connectors_counts_data')
-    ev_metadata_file = os.path.join(project_path, 'data', dataset_name, 'ev', 'location_meta_data.csv')
+    raw_data_path = os.path.join(project_path, 'data', 'raw', dataset_name)
+    traffic_temporal_data_folder = os.path.join(raw_data_path, 'traffic', 'traffic_data')
+    traffic_metadata_file = os.path.join(raw_data_path, 'traffic', 'location_summary.csv')
+    ev_temporal_data_folder =os.path.join(raw_data_path, 'ev', 'ev_locations_availability')
+    ev_metadata_file = os.path.join(raw_data_path, 'ev', 'ev_location_metadata.csv')
     chkpt_dir = ''
     logs_dir = os.path.join(project_path, 'registry', 'logs')
     default_save_tensor_name = '_processed_tensors'
@@ -113,9 +115,9 @@ class Parameters:
         # self.preprocessed_dataset_path = os.path.join(self.project_path, 'data', 'processed', self.dataset_name)
         self.traffic_temporal_data_folder = os.path.join(self.project_path, 'data', 'raw', self.dataset_name, 'traffic/traffic_data')
         self.traffic_metadata_file = os.path.join(self.project_path, 'data',  'raw', self.dataset_name,
-                                             'traffic/processed_newyork_traffic_graph.csv')
-        self.ev_temporal_data_folder = os.path.join(self.project_path, 'data',  'raw', self.dataset_name, 'ev/stations_connectors_counts_data')
-        self.ev_metadata_file = os.path.join(self.project_path, 'data',  'raw', self.dataset_name, 'ev/location_meta_data.csv')
+                                             'traffic/location_summary.csv')
+        self.ev_temporal_data_folder = os.path.join(self.project_path, 'data',  'raw', self.dataset_name, 'ev/ev_locations_availability')
+        self.ev_metadata_file = os.path.join(self.project_path, 'data',  'raw', self.dataset_name, 'ev/ev_location_metadata.csv')
 
         self.dirpath_save_ckpt = os.path.join(self.project_path, 'registry', 'checkpoints', f'ckpt_{self.dataset_name}')
         self.dirpath_save_config = os.path.join(self.project_path, 'registry', 'configurations', f'config_{self.id_run}.json')

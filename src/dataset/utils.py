@@ -144,224 +144,214 @@ def create_adjacency_matrix(coordinates,
     return torch.tensor(adj_matrix).to('cuda')
 
 
-def augment_graph_df_v3(
-    edges_df: pd.DataFrame,
-    nodes_df: pd.DataFrame,
-    fill_pct: float = 0.001,
-    id_col: str = "id",
-    src_id_col: str = "src_id",
-    tgt_id_col: str = "tgt_id",
-    src_col: str = "src",
-    tgt_col: str = "tgt",
-    distance_col: str = "distance",
-    metric: str = "haversine",   # "haversine" (metri, default) oppure "euclidean" (sulle coordinate grezze)
-    earth_radius_m: float = 6_371_000.0,
-    sort_endpoints: bool = True, # normalizza i nuovi archi come (min_id, max_id)
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Adds edges to a graph defined by `edges_df` (existing edges) and `nodes_df` (nodes with lat/lon),
-    so that it first becomes connected (via MST) and then reaches the desired edge fraction (`fill_pct`).
+def augment_graph_df_v3(edges_df: pd.DataFrame,
+                        nodes_df: pd.DataFrame,
+                        fill_pct: float = 0.001,
+                        id_col: str = "id",
+                        src_id_col: str = "src_id",
+                        tgt_id_col: str = "tgt_id",
+                        src_col: str = "src",
+                        tgt_col: str = "tgt",
+                        distance_col: str = "distance",
+                        metric: str = "haversine",   # "haversine" (metri, default) oppure "euclidean" (sulle coordinate grezze)
+                        earth_radius_m: float = 6_371_000.0,
+                        sort_endpoints: bool = True, # normalizza i nuovi archi come (min_id, max_id)
+                    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+                        """
+                        Adds edges to a graph defined by `edges_df` (existing edges) and `nodes_df` (nodes with lat/lon),
+                        so that it first becomes connected (via MST) and then reaches the desired edge fraction (`fill_pct`).
 
-    ## Parameters
+                        ## Parameters
 
-    `edges_df` : DataFrame with columns `[id, src, tgt, distance, src_id, tgt_id]` (`src`/`tgt` are coordinate tuples)
-    `nodes_df` : DataFrame with columns `[node_id, lat, lon]`
-    `fill_pct` : float in `[0.0, 1.0]`. `0.0` => adds only the minimum number of edges required to connect the graph.
-    `1.0` => complete graph (all possible edges).
-    `metric` : `"haversine"` (meters, recommended for lat/lon) or `"euclidean"` (on coordinates in degrees).
-    `sort_endpoints` : if `True`, new edges are stored as `(min_id, max_id)` for consistency and deduplication.
+                        `edges_df` : DataFrame with columns `[id, src, tgt, distance, src_id, tgt_id]` (`src`/`tgt` are coordinate tuples)
+                        `nodes_df` : DataFrame with columns `[node_id, lat, lon]`
+                        `fill_pct` : float in `[0.0, 1.0]`. `0.0` => adds only the minimum number of edges required to connect the graph.
+                        `1.0` => complete graph (all possible edges).
+                        `metric` : `"haversine"` (meters, recommended for lat/lon) or `"euclidean"` (on coordinates in degrees).
+                        `sort_endpoints` : if `True`, new edges are stored as `(min_id, max_id)` for consistency and deduplication.
 
-    ## Returns
+                        ## Returns
 
-    `(edges_df_new, nodes_df_unchanged, added_edges_df)`
+                        `(edges_df_new, nodes_df_unchanged, added_edges_df)`
 
-    * edges_df_new: edges_df with the added edges appended
-    * added_edges_df: DataFrame containing only the added edges
+                        * edges_df_new: edges_df with the added edges appended
+                        * added_edges_df: DataFrame containing only the added edges
 
-    """
-    # --- Validazioni di base ---
-    if not (0.0 <= fill_pct <= 1.0):
-        raise ValueError("fill_pct dev'essere tra 0.0 e 1.0")
+                        """
+                        # --- Validazioni di base ---
+                        if not (0.0 <= fill_pct <= 1.0):
+                            raise ValueError("fill_pct dev'essere tra 0.0 e 1.0")
 
-    required_node_cols = {"node_id", "lat", "lon"}
-    if not required_node_cols.issubset(nodes_df.columns):
-        raise ValueError(f"nodes_df deve contenere le colonne {required_node_cols}")
+                        required_node_cols = {"node_id", "lat", "lon"}
+                        if not required_node_cols.issubset(nodes_df.columns):
+                            raise ValueError(f"nodes_df deve contenere le colonne {required_node_cols}")
 
-    required_edge_cols = {src_id_col, tgt_id_col}
-    if not required_edge_cols.issubset(edges_df.columns):
-        raise ValueError(f"edges_df deve contenere almeno le colonne {required_edge_cols}")
+                        required_edge_cols = {src_id_col, tgt_id_col}
+                        if not required_edge_cols.issubset(edges_df.columns):
+                            raise ValueError(f"edges_df deve contenere almeno le colonne {required_edge_cols}")
 
-    # --- Mappature e strutture di supporto ---
-    # user -> idx compatti [0..n-1] per Union-Find
-    nodes_df_local = nodes_df.copy()
-    node_ids = nodes_df_local["node_id"].astype(int).tolist()
-    id_to_idx = {nid: i for i, nid in enumerate(node_ids)}
-    idx_to_id = {i: nid for nid, i in id_to_idx.items()}
+                        # --- Mappature e strutture di supporto ---
+                        # user -> idx compatti [0..n-1] per Union-Find
+                        nodes_df_local = nodes_df.copy()
+                        node_ids = nodes_df_local["node_id"].astype(int).tolist()
+                        id_to_idx = {nid: i for i, nid in enumerate(node_ids)}
+                        idx_to_id = {i: nid for nid, i in id_to_idx.items()}
 
-    # dizionario id_nodo -> (lat, lon)
-    coords = {
-        int(row["node_id"]): (float(row["lat"]), float(row["lon"]))
-        for _, row in nodes_df_local.iterrows()
-    }
+                        # dizionario id_nodo -> (lat, lon)
+                        coords = {
+                            int(row["node_id"]): (float(row["lat"]), float(row["lon"]))
+                            for _, row in nodes_df_local.iterrows()
+                        }
 
-    n = len(node_ids)
-    if n < 2:
-        # niente da fare
-        return edges_df.copy(), pd.DataFrame(columns=[id_col, src_col, tgt_col, distance_col, src_id_col, tgt_id_col])
+                        n = len(node_ids)
+                        if n < 2:
+                            # niente da fare
+                            return edges_df.copy(), pd.DataFrame(columns=[id_col, src_col, tgt_col, distance_col, src_id_col, tgt_id_col])
 
-    # def haversine_m(a, b):
-    #     # a, b: (lat, lon) in gradi
-    #     lat1, lon1 = map(math.radians, a)
-    #     lat2, lon2 = map(math.radians, b)
-    #     dlat = lat2 - lat1
-    #     dlon = lon2 - lon1
-    #     s = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-    #     c = 2 * math.asin(math.sqrt(s))
-    #     return earth_radius_m * c
 
-    def euclidean(a, b):
-        # distanza euclidea su (lat, lon) in gradi (approssimata)
-        return float(np.hypot(a[0] - b[0], a[1] - b[1]))
+                        def euclidean(a, b):
+                            # distanza euclidea su (lat, lon) in gradi (approssimata)
+                            return float(np.hypot(a[0] - b[0], a[1] - b[1]))
 
-    dist_fun = _haversine_m if metric.lower() == "haversine" else euclidean
+                        dist_fun = _haversine_m if metric.lower() == "haversine" else euclidean
 
-    # --- Insieme archi esistenti (non orientati) usando gli id nodo ---
-    existing_pairs = set()
-    for _, r in edges_df.iterrows():
-        u_id = int(r[src_id_col])
-        v_id = int(r[tgt_id_col])
-        # normalizza eventuali orientamenti
-        if sort_endpoints and u_id > v_id:
-            u_id, v_id = v_id, u_id
-        # escludi archi verso nodi non presenti (se capitasse)
-        if u_id in id_to_idx and v_id in id_to_idx and u_id != v_id:
-            existing_pairs.add(frozenset((id_to_idx[u_id], id_to_idx[v_id])))
+                        # --- Insieme archi esistenti (non orientati) usando gli id nodo ---
+                        existing_pairs = set()
+                        for _, r in edges_df.iterrows():
+                            u_id = int(r[src_id_col])
+                            v_id = int(r[tgt_id_col])
+                            # normalizza eventuali orientamenti
+                            if sort_endpoints and u_id > v_id:
+                                u_id, v_id = v_id, u_id
+                            # escludi archi verso nodi non presenti (se capitasse)
+                            if u_id in id_to_idx and v_id in id_to_idx and u_id != v_id:
+                                existing_pairs.add(frozenset((id_to_idx[u_id], id_to_idx[v_id])))
 
-    # --- Genera la lista completa dei candidati non ancora esistenti: (i, j, dist) ---
-    candidates = []
-    for i, j in combinations(range(n), 2):
-        fs = frozenset((i, j))
-        if fs in existing_pairs:
-            continue
-        u_id, v_id = idx_to_id[i], idx_to_id[j]
-        d = dist_fun(coords[u_id], coords[v_id])
-        candidates.append((i, j, d))
+                        # --- Genera la lista completa dei candidati non ancora esistenti: (i, j, dist) ---
+                        candidates = []
+                        for i, j in combinations(range(n), 2):
+                            fs = frozenset((i, j))
+                            if fs in existing_pairs:
+                                continue
+                            u_id, v_id = idx_to_id[i], idx_to_id[j]
+                            d = dist_fun(coords[u_id], coords[v_id])
+                            candidates.append((i, j, d))
 
-    # ordina per distanza crescente
-    candidates.sort(key=lambda x: x[2])
+                        # ordina per distanza crescente
+                        candidates.sort(key=lambda x: x[2])
 
-    # --- Union-Find inizializzato con gli archi esistenti (così preserviamo i componenti già connessi) ---
-    parent = list(range(n))
-    rank = [0] * n
+                        # --- Union-Find inizializzato con gli archi esistenti (così preserviamo i componenti già connessi) ---
+                        parent = list(range(n))
+                        rank = [0] * n
 
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
+                        def find(x:int):  # I put ":int" instead on nothing
+                            while parent[x] != x:
+                                parent[x] = parent[parent[x]]
+                                x = parent[x]
+                            return x
 
-    def union(a, b):
-        ra, rb = find(a), find(b)
-        if ra == rb:
-            return False
-        # union by rank
-        if rank[ra] < rank[rb]:
-            parent[ra] = rb
-        elif rank[ra] > rank[rb]:
-            parent[rb] = ra
-        else:
-            parent[rb] = ra
-            rank[ra] += 1
-        return True
+                        def union(a, b):
+                            ra, rb = find(a), find(b)
+                            if ra == rb:
+                                return False
+                            # union by rank
+                            if rank[ra] < rank[rb]:
+                                parent[ra] = rb
+                            elif rank[ra] > rank[rb]:
+                                parent[rb] = ra
+                            else:
+                                parent[rb] = ra
+                                rank[ra] += 1
+                            return True
 
-    # unisci gli archi esistenti
-    for fs in existing_pairs:
-        (i, j) = tuple(fs)
-        union(i, j)
+                        # unisci gli archi esistenti
+                        for fs in existing_pairs:
+                            (i, j) = tuple(fs)
+                            union(i, j)
 
-    # conta i componenti iniziali
-    def components_count():
-        roots = {find(i) for i in range(n)}
-        return len(roots)
+                        # conta i componenti iniziali
+                        def components_count():
+                            roots = {find(i) for i in range(n)}
+                            return len(roots)
 
-    comps = components_count()
+                        comps = components_count()
 
-    # --- 1) Aggiungi archi MST minimi necessari per connettere il grafo ---
-    mst_edges_idx = []  # lista di (i, j) sugli indici compatti
-    if comps > 1:
-        for i, j, _ in candidates:
-            if union(i, j):
-                mst_edges_idx.append((i, j))
-                comps -= 1
-                if comps == 1:
-                    break
+                        # --- 1) Aggiungi archi MST minimi necessari per connettere il grafo ---
+                        mst_edges_idx = []  # lista di (i, j) sugli indici compatti
+                        if comps > 1:
+                            for i, j, _ in candidates:
+                                if union(i, j):
+                                    mst_edges_idx.append((i, j))
+                                    comps -= 1
+                                    if comps == 1:
+                                        break
 
-    # --- 2) Calcola quanti archi totali vogliamo (sul grafo completo non orientato) ---
-    max_total_edges = n * (n - 1) // 2
-    desired_total = int(fill_pct * max_total_edges)
+                        # --- 2) Calcola quanti archi totali vogliamo (sul grafo completo non orientato) ---
+                        max_total_edges = n * (n - 1) // 2
+                        desired_total = int(fill_pct * max_total_edges)
 
-    already = len(existing_pairs) + len(mst_edges_idx)
-    to_add_extra = max(0, desired_total - already)
+                        already = len(existing_pairs) + len(mst_edges_idx)
+                        to_add_extra = max(0, desired_total - already)
 
-    # --- 3) Aggiungi ulteriori archi più corti (oltre all’MST) fino a raggiungere desired_total ---
-    added_extra_idx = []
-    if to_add_extra > 0:
-        # set per lookup rapido di ciò che andremo ad aggiungere
-        mst_fs = {frozenset((i, j)) for (i, j) in mst_edges_idx}
-        added_fs = set()
-        for i, j, _ in candidates:
-            if len(added_extra_idx) >= to_add_extra:
-                break
-            fs = frozenset((i, j))
-            if fs in existing_pairs or fs in mst_fs or fs in added_fs:
-                continue
-            added_extra_idx.append((i, j))
-            added_fs.add(fs)
+                        # --- 3) Aggiungi ulteriori archi più corti (oltre all’MST) fino a raggiungere desired_total ---
+                        added_extra_idx = []
+                        if to_add_extra > 0:
+                            # set per lookup rapido di ciò che andremo ad aggiungere
+                            mst_fs = {frozenset((i, j)) for (i, j) in mst_edges_idx}
+                            added_fs = set()
+                            for i, j, _ in candidates:
+                                if len(added_extra_idx) >= to_add_extra:
+                                    break
+                                fs = frozenset((i, j))
+                                if fs in existing_pairs or fs in mst_fs or fs in added_fs:
+                                    continue
+                                added_extra_idx.append((i, j))
+                                added_fs.add(fs)
 
-    # --- 4) Costruisci i DataFrame degli archi nuovi (MST + extra) ---
-    new_edges_idx = mst_edges_idx + added_extra_idx
+                        # --- 4) Costruisci i DataFrame degli archi nuovi (MST + extra) ---
+                        new_edges_idx = mst_edges_idx + added_extra_idx
 
-    # Normalizza orientamento (src_id < tgt_id) se richiesto; calcola distance e coord
-    def row_from_idx(i, j):
-        u_id, v_id = idx_to_id[i], idx_to_id[j]
-        u_coord, v_coord = coords[u_id], coords[v_id]
-        d = dist_fun(u_coord, v_coord)
-        if sort_endpoints and u_id > v_id:
-            u_id, v_id = v_id, u_id
-            u_coord, v_coord = v_coord, u_coord
-        return {
-            src_id_col: u_id,
-            tgt_id_col: v_id,
-            src_col: tuple(u_coord),
-            tgt_col: tuple(v_coord),
-            distance_col: float(d),
-        }
+                        # Normalizza orientamento (src_id < tgt_id) se richiesto; calcola distance e coord
+                        def row_from_idx(i, j):
+                            u_id, v_id = idx_to_id[i], idx_to_id[j]
+                            u_coord, v_coord = coords[u_id], coords[v_id]
+                            d = dist_fun(u_coord, v_coord)
+                            if sort_endpoints and u_id > v_id:
+                                u_id, v_id = v_id, u_id
+                                u_coord, v_coord = v_coord, u_coord
+                            return {
+                                src_id_col: u_id,
+                                tgt_id_col: v_id,
+                                src_col: tuple(u_coord),
+                                tgt_col: tuple(v_coord),
+                                distance_col: float(d),
+                            }
 
-    new_rows = [row_from_idx(i, j) for (i, j) in new_edges_idx]
+                        new_rows = [row_from_idx(i, j) for (i, j) in new_edges_idx]
 
-    if not new_rows:
-        # nessun arco da aggiungere
-        return edges_df.copy(), pd.DataFrame(columns=[id_col, src_col, tgt_col, distance_col, src_id_col, tgt_id_col])
+                        if not new_rows:
+                            # nessun arco da aggiungere
+                            return edges_df.copy(), pd.DataFrame(columns=[id_col, src_col, tgt_col, distance_col, src_id_col, tgt_id_col])
 
-    added_edges_df = pd.DataFrame(new_rows)
+                        added_edges_df = pd.DataFrame(new_rows)
 
-    # assegna id progressivi partendo dal max esistente
-    if edges_df.shape[0] > 0 and id_col in edges_df.columns and pd.api.types.is_numeric_dtype(edges_df[id_col]):
-        start_id = int(edges_df[id_col].max()) + 1
-    else:
-        start_id = 1
-    added_edges_df.insert(0, id_col, range(start_id, start_id + len(added_edges_df)))
+                        # assegna id progressivi partendo dal max esistente
+                        if edges_df.shape[0] > 0 and id_col in edges_df.columns and pd.api.types.is_numeric_dtype(edges_df[id_col]):
+                            start_id = int(edges_df[id_col].max()) + 1
+                        else:
+                            start_id = 1
+                        added_edges_df.insert(0, id_col, range(start_id, start_id + len(added_edges_df)))
 
-    # ordina le colonne in modo "amichevole" se possibile
-    col_order = [id_col, src_col, tgt_col, distance_col, src_id_col, tgt_id_col]
-    for c in col_order:
-        if c not in added_edges_df.columns:
-            col_order.remove(c)
-    added_edges_df = added_edges_df[col_order + [c for c in added_edges_df.columns if c not in col_order]]
+                        # ordina le colonne in modo "amichevole" se possibile
+                        col_order = [id_col, src_col, tgt_col, distance_col, src_id_col, tgt_id_col]
+                        for c in col_order:
+                            if c not in added_edges_df.columns:
+                                col_order.remove(c)
+                        added_edges_df = added_edges_df[col_order + [c for c in added_edges_df.columns if c not in col_order]]
 
-    # --- 5) Concatena agli archi esistenti e restituisci ---
-    edges_df_new = pd.concat([edges_df.copy(), added_edges_df], ignore_index=True)
-    return edges_df_new, added_edges_df
+                        # --- 5) Concatena agli archi esistenti e restituisci ---
+                        edges_df_new = pd.concat([edges_df.copy(), added_edges_df], ignore_index=True)
+                        return edges_df_new, added_edges_df
 
 
 # Haversine distance in meters between two (lat, lon) tuples in degrees
@@ -501,7 +491,7 @@ if __name__ == '__main__':
     """
 
     # Load traffic data from the CSV file to analyze the geographic coordinates
-    data = pd.read_csv('../../data/denmark/traffic/trafficMetaData.csv')
+    data = pd.read_csv('../../data/denmark/traffic/location_summary.csv')
 
     # Create an empty list to store the average points of the stations
     list_of_stations = list()

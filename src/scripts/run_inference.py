@@ -11,7 +11,7 @@ from src.utils.utils import get_model
 matplotlib.use("tkagg")
 
 from src.config import Parameters
-from src.dataset.dataset import get_datamodule
+from src.dataset.datasets import get_datamodule
 
 
 def main():

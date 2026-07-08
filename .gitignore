@@ -175,3 +175,5 @@ registry/
 dataset/
 checkpoints/data/processed/chicago/final_temporal_merged_data.pt
 src/optimization/chicago/data/processor_cache.pkl
+data/processed/losangeles/
+data/raw/losangeles/

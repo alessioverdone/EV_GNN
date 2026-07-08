@@ -75,7 +75,7 @@ class DenmarkDataProcessor:
         return stats
 
     def _load_network(self):
-        metadata_path = os.path.join(self.data_path, 'trafficMetaData.csv')
+        metadata_path = os.path.join(self.data_path, 'location_summary.csv')
         if not os.path.exists(metadata_path):
             raise FileNotFoundError(f"Cannot find {metadata_path}")
 
@@ -122,9 +122,9 @@ class DenmarkDataProcessor:
         print(f"  Edges: {self.graph.number_of_edges()}")
 
     def _load_ev_stations(self):
-        stations_path = os.path.join(self.data_path, 'charging_stations.csv')
+        stations_path = os.path.join(self.data_path, 'ev_location_metadata.csv')
         if not os.path.exists(stations_path):
-            print("  charging_stations.csv not found - skipping")
+            print("  ev_location_metadata.csv not found - skipping")
             return
 
         df = pd.read_csv(stations_path)
