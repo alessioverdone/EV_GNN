@@ -100,7 +100,7 @@ def run_single_combination(combo: dict,
 
 def main():
     search_space = {
-        'dataset_name': ['newyork'],
+        'dataset_name': ['losangeles'],
         'emb_dim':[64],
         'dropout':[0.0, 0.1],
         'batch_size': [16],

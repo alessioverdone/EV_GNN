@@ -11,8 +11,11 @@ class Parameters:
 
     # Datasets and paths
     with open(os.path.join(project_path, "registry", "configurations", "dataset_hyperparams.json"),
-              "r", encoding="utf-8") as file:
-        datasets_hyperparameters = json.load(file)
+              "r", encoding="utf-8") as _hyperparams_file:
+        datasets_hyperparameters = json.load(_hyperparams_file)
+    # Evita che `_hyperparams_file` resti come attributo di classe (verrebbe poi
+    # copiato sull'istanza in __init__ e romperebbe la serializzazione YAML/JSON).
+    del _hyperparams_file
     save_preprocessed_data = False  # related to traffic_temporal_data_processed
     load_preprocessed_data = False  # related to traffic_temporal_data_processed
     use_traffic_metadata_processed = True
