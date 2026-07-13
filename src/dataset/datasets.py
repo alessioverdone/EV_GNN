@@ -32,19 +32,19 @@ class EVDataModule(LightningDataModule):
         # Newyork dataset
         elif self.run_params.dataset_name == 'newyork':
             self.run_params.traffic_columns_to_use = ["speed", "travel_time"]
-            self.run_params.ev_columns_to_use = ["Available"]
+            self.run_params.ev_columns_to_use = ["AvailabilityRate"]
             dataset = DatasetNewyork(self.run_params)
 
         # Chicago dataset
         elif self.run_params.dataset_name == 'chicago':
-            self.run_params.traffic_columns_to_use = ["speed", "length"]
-            self.run_params.ev_columns_to_use = ["Available"]
+            self.run_params.traffic_columns_to_use = ["speed"]  # , "length"
+            self.run_params.ev_columns_to_use = ["AvailabilityRate"]
             dataset = DatasetChicago(self.run_params)
 
         # Chicago dataset
         elif self.run_params.dataset_name == 'losangeles':
             self.run_params.traffic_columns_to_use = ["avg_speed", "total_flow", "avg_occupancy"]
-            self.run_params.ev_columns_to_use = ["Available"]
+            self.run_params.ev_columns_to_use = ["AvailabilityRate"]
             dataset = DatasetLosangeles(self.run_params)
         else:
             raise ValueError(f'Dataset {self.run_params.dataset_name} not recognized')

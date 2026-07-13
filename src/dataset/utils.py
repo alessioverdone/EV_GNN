@@ -6,6 +6,63 @@ import pandas as pd
 from typing import  Tuple
 
 
+# Derived EV features: names that are *computed* from raw EV columns instead of being
+# selected directly. Maps the feature name used in `params.ev_columns_to_use` to the
+# (numerator, denominator) raw columns it is built from.
+EV_DERIVED_FEATURES = {
+    "AvailabilityRate": ("Available", "Total"),  # fraction of available chargers in [0, 1]
+}
+
+
+def select_ev_features(df: pd.DataFrame, ev_columns_to_use) -> pd.DataFrame:
+    """Return `df` restricted to the requested EV feature columns, computing any
+    derived feature (e.g. ``AvailabilityRate = Available / Total``) on the fly.
+
+    This is the single place that maps ``params.ev_columns_to_use`` to actual
+    feature columns, shared by chicago/newyork/losangeles so raw and derived
+    features are handled identically everywhere.
+
+    `ev_columns_to_use` may mix raw column names already present in `df`
+    (e.g. "Available", "Total", "Offline") and derived names listed in
+    ``EV_DERIVED_FEATURES``. Columns are returned in the same order as
+    `ev_columns_to_use`, clipped to [0, 1] to stay a proper availability fraction.
+
+    ``Total == 0`` is treated as a valid **0% availability** (ratio ``0.0``), NOT
+    as a missing value: a station with ``Total == 0`` on every timestep would
+    otherwise become an all-``-1`` (all-missing) channel, and ``clean_tensor``'s
+    per-node time-mean of an all-missing channel is NaN, which then poisons the
+    normalization and reaches the training target. Only *genuinely* missing raw
+    values (NaN in Available/Total, e.g. absent timesteps) stay NaN and are left
+    to the downstream padding.
+
+    Notes
+    -----
+    Must be called while `df` still holds the raw columns (before reindex/padding),
+    otherwise the ratio would be computed on padded values.
+    """
+    out = pd.DataFrame(index=df.index)
+    for name in ev_columns_to_use:
+        if name in EV_DERIVED_FEATURES:
+            num_col, den_col = EV_DERIVED_FEATURES[name]
+            missing = {num_col, den_col} - set(df.columns)
+            if missing:
+                raise ValueError(
+                    f"Cannot compute derived EV feature '{name}': missing raw columns {missing}")
+            num = pd.to_numeric(df[num_col], errors="coerce")
+            den = pd.to_numeric(df[den_col], errors="coerce")
+            ratio = num / den                    # x/0 -> inf, 0/0 -> NaN (handled next)
+            ratio = ratio.mask(den == 0, 0.0)    # Total == 0 -> valid 0% availability, not "missing"
+            out[name] = ratio.clip(lower=0.0, upper=1.0)
+        elif name in df.columns:
+            out[name] = pd.to_numeric(df[name], errors="coerce")
+        else:
+            raise ValueError(
+                f"EV feature '{name}' is neither a raw column of the EV data "
+                f"({list(df.columns)}) nor a known derived feature "
+                f"({list(EV_DERIVED_FEATURES)}).")
+    return out
+
+
 class NodeIndexer:
     """
     Assigns a stable integer id to geographic points. Used to merge neighbours nodes
@@ -404,7 +461,20 @@ def build_edges_with_node_ids(df: pd.DataFrame,
     edges["tgt_id"] = edges["tgt"].map(indexer.get_id)
 
     nodes = indexer.nodes_df()
-    return edges, nodes
+
+    # Build merge_map: orig_id -> merged_id
+    # orig_id = sequential index of each unique coordinate in order of first appearance
+    # (equivalent to what NodeIndexer(threshold=0) would assign)
+    seen: list = []
+    seen_set: set = set()
+    for pt in list(edges["src"]) + list(edges["tgt"]):
+        if pt not in seen_set:
+            seen.append(pt)
+            seen_set.add(pt)
+    orig_id = {pt: i for i, pt in enumerate(seen)}
+    merge_map = {orig_id[pt]: indexer.get_id(pt) for pt in seen}
+
+    return edges, nodes, merge_map
 
 def build_edges_with_node_ids_chicago(df: pd.DataFrame,
                               threshold: float = 0.0,
@@ -475,6 +545,43 @@ def clean_tensor(tensor: torch.Tensor) -> torch.Tensor:
     nan_mask = torch.isnan(tensor)
     tensor[nan_mask] = means.expand_as(tensor)[nan_mask]
     return tensor
+
+
+def is_good_ev_file_v2(csv_path) -> bool:
+    """Return True if the EV ev_locations_availability CSV passes the strict quality check.
+
+    A file is "good" if it meets ALL the following conditions:
+    1. for each row, "Available + Offline + In_use == Total";
+    2. the "Available" column is not entirely zero;
+    3. the "In_use" column is not entirely zero.
+
+    Intended to be used as a per-file filter (e.g., within a loading loop).
+    It reads the CSV only once. If there are missing columns or the file is
+    unreadable, it returns "False" (file discarded).
+
+    Parameters
+    ----------
+    csv_path : str | os.PathLike
+        Percorso del file CSV di disponibilita' di una stazione.
+    """
+    REQUIRED_COLUMNS = ["Available", "Total", "Offline"]
+    try:
+        df = pd.read_csv(csv_path, usecols=REQUIRED_COLUMNS)
+    except Exception:  # noqa: BLE001 - colonne mancanti o file illeggibile
+        return False
+
+    if not set(REQUIRED_COLUMNS).issubset(df.columns):
+        return False
+
+    # # 1) condizione sulla somma per ogni riga
+    # expected_total = df["Available"] + df["Offline"]
+    # if (expected_total != df["Total"]).any():
+    #     return False
+
+    # 2) e 3) Available e In_use non tutte zero
+    if (df["Available"] == 0).all():
+        return False
+    return True
 
 if __name__ == '__main__':
     """

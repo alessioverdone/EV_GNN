@@ -1,5 +1,6 @@
 import ast
 import os
+from pathlib import Path
 from types import SimpleNamespace
 
 import pandas as pd
@@ -7,6 +8,17 @@ import matplotlib.pyplot as plt
 
 from src.config import Parameters
 from src.dataset.utils import augment_graph_df_v3
+
+
+# Project root: <...>/EV_GNN (parents[2] of this file), i.e. the folder holding data/.
+# Same convention as visualize_processed_data.py.
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _default_output_dir(dataset_name):
+    """Default output folder for the raw visualization of a dataset:
+    data/raw/<dataset_name>/outputs (same location used by the processed one)."""
+    return _PROJECT_ROOT / "data" / "raw" / dataset_name / "other"
 
 
 def _build_points_column(dataset_name, traffic_metadata, points_col):
@@ -116,7 +128,13 @@ def visualize_real_original_graph(dataset_name,
                                   augment_factor = 0.0001,
                                   points_col = '__points',
                                   traffic_raw_metadata_file = None,
-                                  interchange_threshold_m = 100.0):
+                                  interchange_threshold_m = 100.0,
+                                  output_dir = None,
+                                  output_prefix = None,
+                                  save_png = True,
+                                  save_pdf = True,
+                                  show_plot = False,
+                                  dpi = 200):
 
 
     # Load EV data. The metadata layout matches between chicago/newyork
@@ -144,7 +162,7 @@ def visualize_real_original_graph(dataset_name,
     ev_lons = ev_coords[:, 1]
 
     # Plot
-    plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(10, 10))
     plt.scatter(
         ev_lons, ev_lats,
         c='C0',
@@ -198,7 +216,30 @@ def visualize_real_original_graph(dataset_name,
     plt.title('EV points e segmenti di traffico insieme')
     plt.grid(True)
     plt.tight_layout()
-    plt.show()
+
+    # Save the figure as .png and/or .pdf (same behavior as visualize_processed_data.py).
+    out_dir = Path(output_dir) if output_dir else _default_output_dir(dataset_name)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    prefix = output_prefix or f"{dataset_name}_graph_raw"
+
+    saved = {"png": None, "pdf": None}
+    if save_png:
+        png_path = out_dir / f"{prefix}.png"
+        fig.savefig(png_path, dpi=dpi, bbox_inches="tight")
+        saved["png"] = png_path
+        print(f"[visualize_real_original_graph] Salvato PNG → '{png_path}'")
+
+    if save_pdf:
+        pdf_path = out_dir / f"{prefix}.pdf"
+        fig.savefig(pdf_path, bbox_inches="tight")
+        saved["pdf"] = pdf_path
+        print(f"[visualize_real_original_graph] Salvato PDF → '{pdf_path}'")
+
+    if show_plot:
+        plt.show()
+
+    plt.close(fig)
+    return saved
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from datetime import datetime
 import lightning as pl
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
@@ -100,7 +101,7 @@ def run_single_combination(combo: dict,
 
 def main():
     search_space = {
-        'dataset_name': ['losangeles'],
+        'dataset_name': ['newyork'],  # 'losangeles', 'newyork', 'chicago'
         'emb_dim':[64],
         'dropout':[0.0, 0.1],
         'batch_size': [16],

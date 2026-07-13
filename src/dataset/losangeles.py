@@ -10,7 +10,8 @@ from torch_geometric.data import Data
 from src.dataset.losangeles_raw_preprocessing.losangeles_check_ev_files import is_good_ev_file
 from src.dataset.resamplling import resample_to_common_time
 from src.dataset.old.visualize_raw_data import visualize_processed_graph
-from src.dataset.utils import (haversine, create_adjacency_matrix_newyork, augment_graph_df_v3, clean_tensor)
+from src.dataset.utils import (haversine, create_adjacency_matrix_newyork, augment_graph_df_v3, clean_tensor,
+                               select_ev_features)
 from src.utils.utils import directed_to_undirected
 
 
@@ -326,12 +327,8 @@ class DatasetLosangeles(Dataset):
             df["timestamp"] = ts
             df = df.set_index("timestamp")
 
-            # Cast
-            feature_cols_ = [c for c in ev_columns if c != "timestamp"]
-            feature_cols = [c for c in feature_cols_ if c in self.params.ev_columns_to_use]
-
-            df = df[feature_cols]
-            df = df.apply(pd.to_numeric, errors="coerce")
+            # Select requested EV features (raw and/or derived, e.g. AvailabilityRate)
+            df = select_ev_features(df, self.params.ev_columns_to_use)
             dfs.append(df)
             sites.append(site_id)
 
@@ -706,12 +703,8 @@ class DatasetLosangeles(Dataset):
                 else:
                     raise ValueError(strategy)
 
-            # Cast
-            feature_cols_ = [c for c in ev_columns if c != "timestamp"]
-            feature_cols = [c for c in feature_cols_ if c in self.params.ev_columns_to_use]
-
-            df = df[feature_cols]  # maintains the desired order
-            df = df.apply(pd.to_numeric, errors="coerce")
+            # Select requested EV features (raw and/or derived, e.g. AvailabilityRate)
+            df = select_ev_features(df, self.params.ev_columns_to_use)
             dfs.append(df)
             sites.append(site_id)
 

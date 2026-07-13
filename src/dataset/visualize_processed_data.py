@@ -242,7 +242,7 @@ def visualize_processed_graph(dataset_name: str = "chicago",
                     linewidth=added_edge_width,
                     linestyle=added_edge_style,
                     alpha=added_edge_alpha,
-                    label="Archi aggiunti" if first else None,
+                    label="Additional edges" if first else None,
                 )
                 first = False
 
@@ -273,26 +273,26 @@ def visualize_processed_graph(dataset_name: str = "chicago",
 
         legend_handles = [
             Line2D([0], [0], color=edge_color, linewidth=1.5,
-                   linestyle=edge_style, label=f"Archi originali ({len(orig_edges)})"),
+                   linestyle=edge_style, label=f"Additional edges ({len(orig_edges)})"),
         ]
         if not add_edges.empty:
             legend_handles.append(
                 Line2D([0], [0], color=added_edge_color, linewidth=1.5,
                        linestyle=added_edge_style,
-                       label=f"Archi aggiunti ({len(add_edges)})")
+                       label=f"Additional edges ({len(add_edges)})")
             )
         if show_nodes and not nodes_df.empty:
             legend_handles.append(
                 Line2D([0], [0], marker=node_marker, color="w",
                        markerfacecolor=node_color, markersize=7,
                        markeredgecolor="black", markeredgewidth=0.3,
-                       label=f"Nodi ({len(nodes_df)})")
+                       label=f"Nodes ({len(nodes_df)})")
             )
 
         ax.legend(handles=legend_handles, loc="best", fontsize=9)
-        ax.set_xlabel("Longitudine")
-        ax.set_ylabel("Latitudine")
-        ax.set_title(f"Grafo processato {dataset_name} — archi e nodi")
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+        ax.set_title(f"Processed graph {dataset_name} — edges and nodes")
         ax.grid(True, linestyle="--", alpha=0.3)
         plt.tight_layout()
 
@@ -336,7 +336,7 @@ def visualize_processed_graph(dataset_name: str = "chicago",
         else:
             folium.TileLayer("OpenStreetMap", name="OpenStreetMap").add_to(m)
 
-        grp_orig = folium.FeatureGroup(name=f"Archi originali ({len(orig_edges)})").add_to(m)
+        grp_orig = folium.FeatureGroup(name=f"Original edges ({len(orig_edges)})").add_to(m)
         for _, row in orig_edges.iterrows():
             if row["src"] is None or row["tgt"] is None:
                 continue
@@ -351,7 +351,7 @@ def visualize_processed_graph(dataset_name: str = "chicago",
 
         if not add_edges.empty:
             grp_added = folium.FeatureGroup(
-                name=f"Archi aggiunti ({len(add_edges)})"
+                name=f"Additional edges ({len(add_edges)})"
             ).add_to(m)
             for _, row in add_edges.iterrows():
                 if row["src"] is None or row["tgt"] is None:
@@ -367,7 +367,7 @@ def visualize_processed_graph(dataset_name: str = "chicago",
                 ).add_to(grp_added)
 
         if show_nodes and not nodes_df.empty:
-            grp_nodes = folium.FeatureGroup(name=f"Nodi ({len(nodes_df)})").add_to(m)
+            grp_nodes = folium.FeatureGroup(name=f"Nodes ({len(nodes_df)})").add_to(m)
             for _, row in nodes_df.iterrows():
                 folium.CircleMarker(
                     location=[float(row["lat"]), float(row["lon"])],

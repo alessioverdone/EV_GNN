@@ -3,6 +3,11 @@ from pathlib import Path
 import pandas as pd
 
 
+# Colonne necessarie al quality check (usate da is_good_ev_file/check_file).
+# Valore di default cosi' i chiamanti possono invocare is_good_ev_file(path).
+DEFAULT_REQUIRED_COLUMNS = ["Available", "Total", "Offline", "In_use"]
+
+
 def check_file(csv_path: Path,
                REQUIRED_COLUMNS) -> int:
     """Return the number of rows in `csv_path` that violate the condition.
@@ -44,7 +49,7 @@ def has_only_zero_column(csv_path: Path,
 
 
 def is_good_ev_file(csv_path,
-                    REQUIRED_COLUMNS) -> bool:
+                    REQUIRED_COLUMNS=DEFAULT_REQUIRED_COLUMNS) -> bool:
     """Return True if the EV ev_locations_availability CSV passes the strict quality check.
 
     A file is "good" if it meets ALL the following conditions:

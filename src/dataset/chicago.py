@@ -14,7 +14,8 @@ from src.dataset.utils import (haversine,
                                augment_graph_df_v3,
                                append_along_N_torch,
                                build_edges_with_node_ids_chicago,
-                               clean_tensor)
+                               clean_tensor, is_good_ev_file_v2,
+                               select_ev_features)
 from src.utils.utils import directed_to_undirected, edge_to_node_aggregation
 
 
@@ -155,6 +156,7 @@ class DatasetChicago(Dataset):
             torch.save(self.map_ev_node_traffic_node, preprocessed_map_ev_node_traffic_node)
             torch.save(self.map_real_ev_node_traffic_node, preprocessed_map_real_ev_node_traffic_node)
             torch.save(self.merged_traffic_nodes_map, preprocessed_merged_traffic_nodes_map)
+
             self.nodes_df.to_csv(preprocessed_nodes_df)
             self.edges_df.to_csv(preprocessed_edges_df)
             self.added_edges_df.to_csv(preprocessed_added_edges_df)
@@ -309,6 +311,11 @@ class DatasetChicago(Dataset):
                 print(f'[check_traffic_ev_time] {site_id} EV site out of spatial range!')
                 continue
 
+            # # >>> NUOVO: scarta i file "non buoni" (check stringente)
+            # if not is_good_ev_file_v2(path):
+            #     print(f'Skipping {site_id} since it does not pass the quality check!')
+            #     continue
+
             # Import EV data
             df = pd.read_csv(path, usecols=ev_columns)
 
@@ -323,12 +330,8 @@ class DatasetChicago(Dataset):
             df["timestamp"] = ts
             df = df.set_index("timestamp")
 
-            # Cast
-            feature_cols_ = [c for c in ev_columns if c != "timestamp"]
-            feature_cols = [c for c in feature_cols_ if c in self.params.ev_columns_to_use]
-
-            df = df[feature_cols]
-            df = df.apply(pd.to_numeric, errors="coerce")
+            # Select requested EV features (raw and/or derived, e.g. AvailabilityRate)
+            df = select_ev_features(df, self.params.ev_columns_to_use)
             dfs.append(df)
             sites.append(site_id)
 
@@ -660,6 +663,11 @@ class DatasetChicago(Dataset):
                 print(f'Skipping {site_id} since it is too distant!')
                 continue
 
+            # # >>> NUOVO: scarta i file "non buoni" (check stringente)
+            # if not is_good_ev_file_v2(path):
+            #     print(f'Skipping {site_id} since it does not pass the quality check!')
+            #     continue
+
             # Load EV data
             df = pd.read_csv(path, usecols=DatasetChicago._EV_DATA_COLUMNS)
 
@@ -690,12 +698,8 @@ class DatasetChicago(Dataset):
                 else:
                     raise ValueError(strategy)
 
-            # Cast
-            feature_cols_ = [c for c in ev_columns if c != "timestamp"]
-            feature_cols = [c for c in feature_cols_ if c in self.params.ev_columns_to_use]
-
-            df = df[feature_cols]  # maintains the desired order
-            df = df.apply(pd.to_numeric, errors="coerce")
+            # Select requested EV features (raw and/or derived, e.g. AvailabilityRate)
+            df = select_ev_features(df, self.params.ev_columns_to_use)
             dfs.append(df)
             sites.append(site_id)
 

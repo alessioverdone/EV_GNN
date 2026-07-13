@@ -23,7 +23,8 @@ from src.dataset.utils import (haversine,
                                create_adjacency_matrix_newyork,
                                augment_graph_df_v3,
                                append_along_N_torch,
-                               clean_tensor)
+                               clean_tensor, is_good_ev_file_v2,
+                               select_ev_features)
 from src.utils.utils import (directed_to_undirected,
                              edge_to_node_aggregation)
 
@@ -288,8 +289,12 @@ class DatasetNewyork(Dataset):
                                                          'edge_weights_traffic.pt')
         preprocessed_map_ev_node_traffic_node = os.path.join(self.params.preprocessed_data_path,
                                                          'map_ev_node_traffic_node.pt')
+        preprocessed_map_real_ev_node_traffic_node = os.path.join(self.params.preprocessed_data_path,
+                                                                  'map_real_ev_node_traffic_node.pt')
         preprocessed_dataset_config = os.path.join(self.params.preprocessed_data_path,
                                                    'dataset_config.pt')
+        preprocessed_merged_traffic_nodes_map = os.path.join(self.params.preprocessed_data_path,
+                                                             'merged_traffic_nodes_map.pt')
 
         preprocessed_nodes_df = os.path.join(self.params.preprocessed_data_path,
                                                    'nodes_df.csv')
@@ -306,12 +311,16 @@ class DatasetNewyork(Dataset):
                 os.path.exists(preprocessed_nodes_df) and
                 os.path.exists(preprocessed_edges_df) and
                 os.path.exists(preprocessed_added_edges_df) and
-                os.path.exists(preprocessed_map_ev_node_traffic_node)):
+                os.path.exists(preprocessed_map_ev_node_traffic_node) and
+                os.path.exists(preprocessed_map_real_ev_node_traffic_node) and
+                os.path.exists(preprocessed_merged_traffic_nodes_map)):
             self.final_temporal_merged_data = torch.load(preprocessed_filepath_merged_data, weights_only=False)
             self.time_column = torch.load(preprocessed_filepath_time_column, weights_only=False)
             self.edge_index_traffic = torch.load(preprocessed_edge_index_traffic, weights_only=False)
             self.edge_weights_traffic = torch.load(preprocessed_edge_weights_traffic, weights_only=False)
             self.map_ev_node_traffic_node = torch.load(preprocessed_map_ev_node_traffic_node, weights_only=False)
+            self.map_real_ev_node_traffic_node = torch.load(preprocessed_map_real_ev_node_traffic_node, weights_only=False)
+            self.merged_traffic_nodes_map = torch.load(preprocessed_merged_traffic_nodes_map, weights_only=False)
 
             self.dataset_config = torch.load(preprocessed_dataset_config, weights_only=False)
             self.number_of_station = self.dataset_config["number_of_station"]
@@ -372,6 +381,12 @@ class DatasetNewyork(Dataset):
             torch.save(self.edge_index_traffic, preprocessed_edge_index_traffic)
             torch.save(self.edge_weights_traffic, preprocessed_edge_weights_traffic)
             torch.save(self.map_ev_node_traffic_node, preprocessed_map_ev_node_traffic_node)
+            torch.save(self.map_real_ev_node_traffic_node, preprocessed_map_real_ev_node_traffic_node)
+            torch.save(self.merged_traffic_nodes_map, preprocessed_merged_traffic_nodes_map)
+
+            self.nodes_df.to_csv(preprocessed_nodes_df)
+            self.edges_df.to_csv(preprocessed_edges_df)
+            self.added_edges_df.to_csv(preprocessed_added_edges_df)
 
             dataset_config = {"number_of_station": self.number_of_station,
                               "traffic_features": self.traffic_features,
@@ -383,10 +398,6 @@ class DatasetNewyork(Dataset):
                               "traffic_resolution": self.traffic_resolution,
                               "ev_resolution": self.ev_resolution}
             torch.save(dataset_config, preprocessed_dataset_config)
-
-            self.nodes_df.to_csv(preprocessed_nodes_df)
-            self.edges_df.to_csv(preprocessed_edges_df)
-            self.added_edges_df.to_csv(preprocessed_added_edges_df)
 
             # Normalize and stack data into fixed-size input/output windows objects
             self.preprocess_and_assemble_data()
@@ -530,6 +541,11 @@ class DatasetNewyork(Dataset):
                 print(f'Skipping {site_id}')
                 continue
 
+            # # >>> NUOVO: scarta i file "non buoni" (check stringente)
+            # if not is_good_ev_file_v2(path):
+            #     print(f'Skipping {site_id} since it does not pass the quality check!')
+            #     continue
+
             # Import EV data
             df = pd.read_csv(path, usecols=ev_columns)
 
@@ -544,11 +560,8 @@ class DatasetNewyork(Dataset):
             df["timestamp"] = ts
             df = df.set_index("timestamp")
 
-            # Cast
-            feature_cols_ = [c for c in ev_columns if c != "timestamp"]
-            feature_cols = [c for c in feature_cols_ if c in self.params.ev_columns_to_use]
-            df = df[feature_cols]  # mantiene ordine voluto
-            df = df.apply(pd.to_numeric, errors="coerce")
+            # Select requested EV features (raw and/or derived, e.g. AvailabilityRate)
+            df = select_ev_features(df, self.params.ev_columns_to_use)
             dfs.append(df)
             sites.append(site_id)
 
@@ -753,7 +766,7 @@ class DatasetNewyork(Dataset):
         data_sorted['id'] = range(len(data_sorted))
 
         # Original edges
-        edges_df, self.nodes_df = build_edges_with_node_ids(data_sorted,
+        edges_df, self.nodes_df, self.merged_traffic_nodes_map = build_edges_with_node_ids(data_sorted,
                                                             threshold=threshold,
                                                             distances_col=distances_col)
 
@@ -849,6 +862,11 @@ class DatasetNewyork(Dataset):
                 print(f'Skipping {site_id}')
                 continue
 
+            # # >>> NUOVO: scarta i file "non buoni" (check stringente)
+            # if not is_good_ev_file_v2(path):
+            #     print(f'Skipping {site_id} since it does not pass the quality check!')
+            #     continue
+
             df = pd.read_csv(path, usecols=ev_columns)
 
             # Control missing columns
@@ -879,11 +897,8 @@ class DatasetNewyork(Dataset):
                 else:
                     raise ValueError(strategy)
 
-            # Cast
-            feature_cols_ = [c for c in ev_columns if c != "timestamp"]
-            feature_cols = [c for c in feature_cols_ if c in self.params.ev_columns_to_use]
-            df = df[feature_cols]  # mantiene ordine voluto
-            df = df.apply(pd.to_numeric, errors="coerce")
+            # Select requested EV features (raw and/or derived, e.g. AvailabilityRate)
+            df = select_ev_features(df, self.params.ev_columns_to_use)
 
             dfs.append(df)
             sites.append(site_id)
@@ -941,20 +956,21 @@ class DatasetNewyork(Dataset):
                 continue
             else:
                 lat, lng = row[1]['Latitude'], row[1]['Longitude']
-                ev_coordinates.append((lat, lng))
+                loc_id = row[1]['LocID']
+                ev_coordinates.append((lat, lng, loc_id))
 
 
         # Map each EV node to nearest traffic node
         self.map_ev_node_traffic_node = {}
+        self.map_real_ev_node_traffic_node = {}
         print('Assigning EV to traffic nodes!')
         cont_ev = 0
-        for ev_node_idx, ev_coord in enumerate(ev_coordinates):
+        for ev_node_idx, ev_coord_and_id in enumerate(ev_coordinates):
             if cont_ev == self.params.num_of_ev_nodes_limit:
                 break
-            print(ev_node_idx)
             min_dist = float('inf')
             min_dist_traffic_node_idx = -1
-            lat1, lon1 = ev_coord
+            lat1, lon1, loc_id = ev_coord_and_id
             cont_traffic = 0
             for row in self.nodes_df.iterrows():
                 if cont_traffic == self.params.num_of_traffic_nodes_limit:
@@ -966,6 +982,7 @@ class DatasetNewyork(Dataset):
                     min_dist_traffic_node_idx = traffic_node_idx
                 cont_traffic += 1
             self.map_ev_node_traffic_node[ev_node_idx] = int(min_dist_traffic_node_idx)
+            self.map_real_ev_node_traffic_node[loc_id] = int(min_dist_traffic_node_idx)
             cont_ev += 1
 
         # Assign the combined temporal ev data (self.data_tensor_ev) to temporal traffic data (self.data_tensor_traffic)
